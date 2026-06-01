@@ -321,11 +321,13 @@ class _ShopCategoryProductsPageState extends State<ShopCategoryProductsPage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isTargetCategory
-              ? primaryGreen.withOpacity(0.3)
-              : lowStock
-                  ? Colors.orange.shade100
-                  : Colors.green.shade50,
+          color: product.isOutOfStock
+              ? Colors.red.shade100
+              : isTargetCategory
+                  ? primaryGreen.withOpacity(0.3)
+                  : lowStock
+                      ? Colors.orange.shade100
+                      : Colors.green.shade50,
           width: isTargetCategory ? 1.5 : 1,
         ),
         boxShadow: [
@@ -347,12 +349,39 @@ class _ShopCategoryProductsPageState extends State<ShopCategoryProductsPage> {
               height: 95,
               width: double.infinity,
               color: lightGreen,
-              child: product.image != null
-                  ? Image.network(product.image!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          _productPlaceholder(product.categoryName))
-                  : _productPlaceholder(product.categoryName),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  product.image != null
+                      ? Image.network(product.image!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              _productPlaceholder(product.categoryName))
+                      : _productPlaceholder(product.categoryName),
+                  if (product.isOutOfStock)
+                    Container(
+                      color: Colors.black.withOpacity(0.4),
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.all(Radius.circular(6)),
+                          ),
+                          child: const Text(
+                            'OUT OF STOCK',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
           Padding(
@@ -389,12 +418,14 @@ class _ShopCategoryProductsPageState extends State<ShopCategoryProductsPage> {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  product.stockDisplay,
+                  product.isOutOfStock ? 'Out of Stock' : product.stockDisplay,
                   style: TextStyle(
                     fontSize: 11,
-                    color: lowStock
-                        ? Colors.orange.shade700
-                        : Colors.grey.shade500,
+                    color: product.isOutOfStock
+                        ? Colors.red
+                        : lowStock
+                            ? Colors.orange.shade700
+                            : Colors.grey.shade500,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -407,47 +438,59 @@ class _ShopCategoryProductsPageState extends State<ShopCategoryProductsPage> {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w900,
-                        color: primaryGreen,
+                        color: product.isOutOfStock ? Colors.grey.shade500 : primaryGreen,
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () async {
-                        try {
-                          await _apiService.addToCart(productId: product.id, quantity: 1);
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Added "${product.name}" to cart!'),
-                                backgroundColor: primaryGreen,
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(e.toString().replaceAll('Exception:', '').trim()),
-                                backgroundColor: Colors.red,
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                            );
-                          }
-                        }
-                      },
-                      child: Container(
+                    if (product.isOutOfStock)
+                      Container(
                         height: 28,
                         width: 28,
                         decoration: BoxDecoration(
-                          color: primaryGreen,
+                          color: Colors.grey.shade200,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.add_rounded,
-                            color: Colors.white, size: 18),
+                        child: Icon(Icons.remove_shopping_cart_rounded,
+                            color: Colors.grey.shade400, size: 14),
+                      )
+                    else
+                      GestureDetector(
+                        onTap: () async {
+                          try {
+                            await _apiService.addToCart(productId: product.id, quantity: 1);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Added "${product.name}" to cart!'),
+                                  backgroundColor: primaryGreen,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(e.toString().replaceAll('Exception:', '').trim()),
+                                  backgroundColor: Colors.red,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        child: Container(
+                          height: 28,
+                          width: 28,
+                          decoration: BoxDecoration(
+                            color: primaryGreen,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.add_rounded,
+                              color: Colors.white, size: 18),
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ],

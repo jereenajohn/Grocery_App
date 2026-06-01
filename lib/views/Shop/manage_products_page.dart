@@ -1271,7 +1271,12 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: Colors.green.shade50),
+            border: Border.all(
+              color: p.isOutOfStock
+                  ? Colors.red.shade100
+                  : (p.lowStockWarning ? Colors.orange.shade100 : Colors.green.shade50),
+              width: p.isOutOfStock ? 1.5 : 1,
+            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.green.withOpacity(0.04),
@@ -1329,8 +1334,38 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                               ),
                             ),
                           ),
-                          // Low stock badge
-                          if (p.lowStockWarning)
+                          // Stock status badge
+                          if (p.isOutOfStock)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.error_outline_rounded,
+                                    size: 12,
+                                    color: Colors.red.shade600,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Out of Stock',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.red.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else if (p.lowStockWarning)
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 8,
@@ -1405,9 +1440,9 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                           const SizedBox(width: 8),
                           _infoChip(
                             Icons.inventory_2_rounded,
-                            p.stockDisplay,
-                            const Color(0xFF0097A7),
-                            const Color(0xFFE0F7FA),
+                            p.isOutOfStock ? 'Out of Stock' : p.stockDisplay,
+                            p.isOutOfStock ? Colors.red.shade600 : const Color(0xFF0097A7),
+                            p.isOutOfStock ? Colors.red.shade50 : const Color(0xFFE0F7FA),
                           ),
                         ],
                       ),

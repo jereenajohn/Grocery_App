@@ -36,8 +36,9 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
       _error = null;
     });
     try {
-      final products =
-          await _apiService.getProductsByShop(shopId: widget.shop.id);
+      final products = await _apiService.getProductsByShop(
+        shopId: widget.shop.id,
+      );
       setState(() {
         _products = products;
         _isLoading = false;
@@ -74,8 +75,9 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
 
   Widget _buildSliverAppBar() {
     final shop = widget.shop;
-    final initials = '${shop.firstName.isNotEmpty ? shop.firstName[0] : ''}${shop.lastName.isNotEmpty ? shop.lastName[0] : ''}'
-        .toUpperCase();
+    final initials =
+        '${shop.firstName.isNotEmpty ? shop.firstName[0] : ''}${shop.lastName.isNotEmpty ? shop.lastName[0] : ''}'
+            .toUpperCase();
 
     return SliverAppBar(
       expandedHeight: 200,
@@ -163,8 +165,11 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                const Icon(Icons.location_on_rounded,
-                                    color: Colors.white70, size: 13),
+                                const Icon(
+                                  Icons.location_on_rounded,
+                                  color: Colors.white70,
+                                  size: 13,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   '${shop.districtName}, ${shop.stateName}',
@@ -179,28 +184,7 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                           ],
                         ),
                       ),
-                      // Status badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: shop.approvalStatus == 'approved'
-                              ? Colors.green.shade400
-                              : shop.approvalStatus == 'pending'
-                                  ? goldAccent
-                                  : Colors.red.shade400,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          shop.approvalStatus.toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
+                     
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -208,8 +192,10 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                     children: [
                       _infoChip(Icons.storefront_rounded, 'Shop'),
                       const SizedBox(width: 8),
-                      _infoChip(Icons.inventory_2_rounded,
-                          '${_products.length} Products'),
+                      _infoChip(
+                        Icons.inventory_2_rounded,
+                        '${_products.length} Products',
+                      ),
                     ],
                   ),
                 ],
@@ -255,9 +241,11 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
           children: [
             Icon(Icons.wifi_off_rounded, size: 64, color: Colors.red.shade300),
             const SizedBox(height: 16),
-            Text(_error!,
-                style: TextStyle(color: Colors.grey.shade600),
-                textAlign: TextAlign.center),
+            Text(
+              _error!,
+              style: TextStyle(color: Colors.grey.shade600),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: _loadProducts,
@@ -267,7 +255,8 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                 backgroundColor: primaryGreen,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],
@@ -285,18 +274,27 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
           children: [
             Container(
               padding: const EdgeInsets.all(24),
-              decoration:
-                  BoxDecoration(color: lightGreen, shape: BoxShape.circle),
-              child: Icon(Icons.inventory_2_outlined,
-                  size: 56, color: primaryGreen.withOpacity(0.5)),
+              decoration: BoxDecoration(
+                color: lightGreen,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.inventory_2_outlined,
+                size: 56,
+                color: primaryGreen.withOpacity(0.5),
+              ),
             ),
             const SizedBox(height: 20),
-            const Text('No Products Yet',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+            const Text(
+              'No Products Yet',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+            ),
             const SizedBox(height: 8),
-            Text('This shop hasn\'t listed any products.',
-                style: TextStyle(color: Colors.grey.shade500),
-                textAlign: TextAlign.center),
+            Text(
+              'This shop hasn\'t listed any products.',
+              style: TextStyle(color: Colors.grey.shade500),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),
@@ -329,7 +327,10 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: lowStock ? Colors.orange.shade100 : Colors.green.shade50,
+          color: product.isOutOfStock
+              ? Colors.red.shade100
+              : (lowStock ? Colors.orange.shade100 : Colors.green.shade50),
+          width: product.isOutOfStock ? 1.5 : 1,
         ),
         boxShadow: [
           BoxShadow(
@@ -344,18 +345,49 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
         children: [
           // Image / placeholder
           ClipRRect(
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             child: Container(
               height: 95,
               width: double.infinity,
               color: lightGreen,
-              child: product.image != null
-                  ? Image.network(product.image!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          _productPlaceholder(product.categoryName))
-                  : _productPlaceholder(product.categoryName),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  product.image != null
+                      ? Image.network(
+                          product.image!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              _productPlaceholder(product.categoryName),
+                        )
+                      : _productPlaceholder(product.categoryName),
+                  if (product.isOutOfStock)
+                    Container(
+                      color: Colors.black.withOpacity(0.4),
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.all(Radius.circular(6)),
+                          ),
+                          child: const Text(
+                            'OUT OF STOCK',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
           Padding(
@@ -365,8 +397,10 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
               children: [
                 // Category chip
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: lightGreen,
                     borderRadius: BorderRadius.circular(6),
@@ -392,12 +426,14 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  product.stockDisplay,
+                  product.isOutOfStock ? 'Out of Stock' : product.stockDisplay,
                   style: TextStyle(
                     fontSize: 11,
-                    color: lowStock
-                        ? Colors.orange.shade700
-                        : Colors.grey.shade500,
+                    color: product.isOutOfStock
+                        ? Colors.red
+                        : (lowStock
+                              ? Colors.orange.shade700
+                              : Colors.grey.shade500),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -410,47 +446,81 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w900,
-                        color: primaryGreen,
+                        color: product.isOutOfStock
+                            ? Colors.grey.shade500
+                            : primaryGreen,
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () async {
-                        try {
-                          await _apiService.addToCart(productId: product.id, quantity: 1);
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Added "${product.name}" to cart!'),
-                                backgroundColor: primaryGreen,
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(e.toString().replaceAll('Exception:', '').trim()),
-                                backgroundColor: Colors.red,
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                            );
-                          }
-                        }
-                      },
-                      child: Container(
+                    if (product.isOutOfStock)
+                      Container(
                         height: 28,
                         width: 28,
                         decoration: BoxDecoration(
-                          color: primaryGreen,
+                          color: Colors.grey.shade200,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.add_rounded,
-                            color: Colors.white, size: 18),
+                        child: Icon(
+                          Icons.remove_shopping_cart_rounded,
+                          color: Colors.grey.shade400,
+                          size: 14,
+                        ),
+                      )
+                    else
+                      GestureDetector(
+                        onTap: () async {
+                          try {
+                            await _apiService.addToCart(
+                              productId: product.id,
+                              quantity: 1,
+                            );
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Added "${product.name}" to cart!',
+                                  ),
+                                  backgroundColor: primaryGreen,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    e
+                                        .toString()
+                                        .replaceAll('Exception:', '')
+                                        .trim(),
+                                  ),
+                                  backgroundColor: Colors.red,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        child: Container(
+                          height: 28,
+                          width: 28,
+                          decoration: BoxDecoration(
+                            color: primaryGreen,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.add_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ],
@@ -470,7 +540,8 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
       'meat': Icons.restaurant_rounded,
       'drinks': Icons.local_drink_rounded,
     };
-    final icon = iconMap[category.toLowerCase()] ?? Icons.shopping_basket_rounded;
+    final icon =
+        iconMap[category.toLowerCase()] ?? Icons.shopping_basket_rounded;
     return Center(
       child: Icon(icon, size: 44, color: primaryGreen.withOpacity(0.4)),
     );
