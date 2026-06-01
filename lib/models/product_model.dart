@@ -12,6 +12,7 @@ class ProductModel {
   final double lowStockThreshold;
   final bool lowStockWarning;
   final String stockDisplay;
+  final bool isOutOfStock;
   final String? image;
   final String createdAt;
 
@@ -27,6 +28,7 @@ class ProductModel {
     required this.lowStockThreshold,
     required this.lowStockWarning,
     required this.stockDisplay,
+    required this.isOutOfStock,
     this.image,
     required this.createdAt,
   });
@@ -52,6 +54,7 @@ class ProductModel {
       lowStockThreshold: (json['low_stock_threshold'] as num?)?.toDouble() ?? 0.0,
       lowStockWarning: json['low_stock_warning'] ?? false,
       stockDisplay: json['stock_display'] ?? '',
+      isOutOfStock: json['is_out_of_stock'] ?? false,
       image: imgUrl,
       createdAt: json['created_at'] ?? '',
     );

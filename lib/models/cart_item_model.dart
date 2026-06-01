@@ -7,6 +7,7 @@ class CartItemModel {
   final String quantityDisplay;
   final String totalPrice;
   final bool stockWarning;
+  final bool isOutOfStock;
 
   CartItemModel({
     required this.id,
@@ -15,6 +16,7 @@ class CartItemModel {
     required this.quantityDisplay,
     required this.totalPrice,
     required this.stockWarning,
+    required this.isOutOfStock,
   });
 
   factory CartItemModel.fromJson(Map<String, dynamic> json) {
@@ -35,6 +37,7 @@ class CartItemModel {
         lowStockThreshold: 0,
         lowStockWarning: false,
         stockDisplay: '',
+        isOutOfStock: false,
         createdAt: '',
       );
     }
@@ -50,6 +53,7 @@ class CartItemModel {
       quantityDisplay: json['quantity_display']?.toString() ?? '${qty.toInt()} ${product.unit}',
       totalPrice: calculatedTotal,
       stockWarning: json['stock_warning'] ?? false,
+      isOutOfStock: json['is_out_of_stock'] ?? false,
     );
   }
 }

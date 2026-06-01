@@ -72,7 +72,7 @@ class _CartPageState extends State<CartPage> {
   Future<void> _deleteItem(CartItemModel item) async {
     setState(() => _isLoading = true);
     try {
-      await _apiService.deleteCartItem(cartItemId: item.id);
+      await _apiService.deleteCartItem(productId: item.product.id);
       final items = await _apiService.getCart();
       setState(() {
         _cartItems = items;
@@ -325,7 +325,10 @@ class _CartPageState extends State<CartPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: Colors.green.shade50),
+          border: Border.all(
+            color: item.isOutOfStock ? Colors.red.shade200 : Colors.green.shade50,
+            width: item.isOutOfStock ? 1.5 : 1,
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.green.withOpacity(0.04),
@@ -372,12 +375,18 @@ class _CartPageState extends State<CartPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      item.product.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 15,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.product.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 3),
                     Text(
@@ -388,13 +397,31 @@ class _CartPageState extends State<CartPage> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
+                    if (item.isOutOfStock) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Out of Stock',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red.shade600,
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     Text(
                       '\$${item.totalPrice}',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w900,
-                        color: primaryGreen,
+                        color: item.isOutOfStock ? Colors.red.shade600 : primaryGreen,
                       ),
                     ),
                   ],
@@ -441,6 +468,8 @@ class _CartPageState extends State<CartPage> {
   }
 
   Widget _buildOrderSummarySection() {
+    final bool hasOutOfStockItems = _cartItems.any((item) => item.isOutOfStock);
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -460,6 +489,33 @@ class _CartPageState extends State<CartPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (hasOutOfStockItems) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.red.shade100),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline_rounded, color: Colors.red.shade600, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Some items are currently out of stock. Please remove them to proceed with checkout.',
+                      style: TextStyle(
+                        color: Colors.red.shade700,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+          ],
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -493,7 +549,7 @@ class _CartPageState extends State<CartPage> {
               Text(
                 '\$${_grandTotal.toStringAsFixed(2)}',
                 style: TextStyle(
-                  color: primaryGreen,
+                  color: hasOutOfStockItems ? Colors.grey.shade500 : primaryGreen,
                   fontWeight: FontWeight.w900,
                   fontSize: 19,
                 ),
@@ -505,20 +561,27 @@ class _CartPageState extends State<CartPage> {
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: () {
-                _showSnackBar('Checkout logic can be added here!', primaryGreen);
-              },
+              onPressed: hasOutOfStockItems
+                  ? () {
+                      _showSnackBar(
+                        'Please remove out of stock items before proceeding.',
+                        Colors.red,
+                      );
+                    }
+                  : () {
+                      _showSnackBar('Checkout logic can be added here!', primaryGreen);
+                    },
               style: ElevatedButton.styleFrom(
-                backgroundColor: primaryGreen,
-                foregroundColor: Colors.white,
+                backgroundColor: hasOutOfStockItems ? Colors.grey.shade300 : primaryGreen,
+                foregroundColor: hasOutOfStockItems ? Colors.grey.shade600 : Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                elevation: 2,
+                elevation: hasOutOfStockItems ? 0 : 2,
               ),
-              child: const Text(
-                'Proceed to Checkout',
-                style: TextStyle(
+              child: Text(
+                hasOutOfStockItems ? 'Checkout Blocked' : 'Proceed to Checkout',
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
