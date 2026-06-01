@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:grocery_app/views/request_otp_page.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../models/country_model.dart';
@@ -878,7 +879,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 TextButton(
                   onPressed: () {
-                    // Navigate to login page if needed.
+                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const RequestOtpPage()));
                   },
                   child: Text(
                     'Login',
