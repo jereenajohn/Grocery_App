@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../address_page.dart';
 import '../request_otp_page.dart';
+import 'change_phone_page.dart';
 import 'manage_products_page.dart';
 
 class ShopHomePage extends StatefulWidget {
@@ -49,21 +50,37 @@ class _ShopHomePageState extends State<ShopHomePage> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Logout', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: const Text('Are you sure you want to log out of your vendor account?'),
+        title: const Text(
+          'Logout',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Are you sure you want to log out of your vendor account?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel', style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Logout',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -135,7 +152,11 @@ class _ShopHomePageState extends State<ShopHomePage> {
                           ? NetworkImage(profilePicture)
                           : null,
                       child: profilePicture.isEmpty
-                          ? const Icon(Icons.storefront_rounded, color: Colors.white, size: 28)
+                          ? const Icon(
+                              Icons.storefront_rounded,
+                              color: Colors.white,
+                              size: 28,
+                            )
                           : null,
                     ),
                   ),
@@ -155,18 +176,29 @@ class _ShopHomePageState extends State<ShopHomePage> {
                           ),
                           const SizedBox(width: 5),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: goldAccent,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: const Row(
                               children: [
-                                Icon(Icons.verified_rounded, size: 9, color: Colors.black87),
+                                Icon(
+                                  Icons.verified_rounded,
+                                  size: 9,
+                                  color: Colors.black87,
+                                ),
                                 SizedBox(width: 2),
                                 Text(
                                   'PRO',
-                                  style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.black87),
+                                  style: TextStyle(
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
                                 ),
                               ],
                             ),
@@ -186,23 +218,6 @@ class _ShopHomePageState extends State<ShopHomePage> {
                     ],
                   ),
                 ],
-              ),
-              InkWell(
-                onTap: _logout,
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.2)),
-                  ),
-                  child: const Icon(
-                    Icons.logout_rounded,
-                    color: Colors.white,
-                    size: 22,
-                  ),
-                ),
               ),
             ],
           ),
@@ -233,7 +248,8 @@ class _ShopHomePageState extends State<ShopHomePage> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: (_isStoreOpen ? primaryGreen : Colors.red).withOpacity(0.4),
+                            color: (_isStoreOpen ? primaryGreen : Colors.red)
+                                .withOpacity(0.4),
                             blurRadius: 6,
                             spreadRadius: 2,
                           ),
@@ -245,7 +261,9 @@ class _ShopHomePageState extends State<ShopHomePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _isStoreOpen ? 'Store is Open & Active' : 'Store is Offline',
+                          _isStoreOpen
+                              ? 'Store is Open & Active'
+                              : 'Store is Offline',
                           style: const TextStyle(
                             fontWeight: FontWeight.w900,
                             fontSize: 14,
@@ -253,7 +271,9 @@ class _ShopHomePageState extends State<ShopHomePage> {
                           ),
                         ),
                         Text(
-                          _isStoreOpen ? 'Accepting delivery requests' : 'Tap to go active',
+                          _isStoreOpen
+                              ? 'Accepting delivery requests'
+                              : 'Tap to go active',
                           style: TextStyle(
                             color: Colors.grey.shade500,
                             fontSize: 11,
@@ -281,382 +301,435 @@ class _ShopHomePageState extends State<ShopHomePage> {
     );
   }
 
-  Widget _buildMetricsGrid() {
-    final List<Map<String, dynamic>> metrics = [
-      {
-        'title': 'Pending Orders',
-        'value': '8 Active',
-        'sub': '4 packing, 4 new',
-        'color': goldAccent,
-        'bg': const Color(0xFFFFF8E1),
-        'icon': Icons.receipt_long_rounded
-      },
-      {
-        'title': 'Store Rating',
-        'value': '4.95 Stars',
-        'sub': '182 reviews total',
-        'color': const Color(0xFFFF5722),
-        'bg': const Color(0xFFFBE9E7),
-        'icon': Icons.star_rate_rounded
-      },
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Quick Overview',
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
+  Widget _buildBody() {
+    switch (_activeNavIndex) {
+      case 0:
+        return SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [_buildHeader(), const SizedBox(height: 24)],
           ),
-          const SizedBox(height: 12),
-
-          // ── My Products Navigation Card ──────────────────────
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ManageProductsPage()),
-              );
-            },
-            child: Container(
-              width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [primaryGreen, darkGreen],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: [
-                  BoxShadow(
-                    color: darkGreen.withOpacity(0.22),
-                    blurRadius: 14,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Icon(
-                      Icons.inventory_2_rounded,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'My Products',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Add, view & manage your product inventory',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 18),
-                ],
-              ),
-            ),
+        );
+      case 1:
+        return SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [_buildHeader(), const SizedBox(height: 24)],
           ),
-          
-          // ── My Addresses Navigation Card ──────────────────────
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AddressPage()),
-              );
-            },
-            child: Container(
-              width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: Colors.green.shade100),
-                boxShadow: [
-                  BoxShadow(
-                    color: primaryGreen.withOpacity(0.06),
-                    blurRadius: 14,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: lightGreen,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Icon(
-                      Icons.location_on_rounded,
-                      color: primaryGreen,
-                      size: 26,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'My Addresses',
-                          style: TextStyle(
-                            color: darkGreen,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          'Manage your shop & delivery addresses',
-                          style: TextStyle(
-                            color: Colors.grey.shade500,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.arrow_forward_ios_rounded,
-                      color: primaryGreen.withOpacity(0.6), size: 18),
-                ],
-              ),
-            ),
-          ),
-
-          // ── Analytics mini-cards ─────────────────────────────
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: metrics.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.35,
-            ),
-            itemBuilder: (context, index) {
-              final metric = metrics[index];
-              return Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: Colors.green.shade50),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.green.withOpacity(0.03),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+        );
+      case 2:
+        return SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 20,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          metric['title'],
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.grey.shade500,
-                          ),
-                        ),
-                        CircleAvatar(
-                          radius: 14,
-                          backgroundColor: metric['bg'],
-                          child: Icon(metric['icon'], size: 16, color: metric['color']),
-                        ),
-                      ],
+                    const Text(
+                      'Product Catalog',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          metric['value'],
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.black87,
+                    const SizedBox(height: 16),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ManageProductsPage(),
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          metric['sub'],
-                          style: TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w600,
-                            color: metric['color'],
+                        );
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [primaryGreen, darkGreen],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
+                          borderRadius: BorderRadius.circular(22),
+                          boxShadow: [
+                            BoxShadow(
+                              color: darkGreen.withOpacity(0.22),
+                              blurRadius: 14,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
                         ),
-                      ],
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: const Icon(
+                                Icons.inventory_2_rounded,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Manage Store Inventory',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'Add new items, adjust stock, and edit details',
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              color: Colors.white70,
+                              size: 18,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
-              );
-            },
+              ),
+            ],
+          ),
+        );
+      case 3:
+        return _buildSettingsView();
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildSettingsView() {
+    final String firstName = _userData['first_name'] ?? 'Vendor';
+    final String lastName = _userData['last_name'] ?? '';
+    final String shopName = firstName.toLowerCase() == 'vendor'
+        ? 'Vendor Store'
+        : '$firstName $lastName\'s Hub'.trim();
+    final String profilePicture = _userData['profile_picture'] ?? '';
+    final String email = _userData['email'] ?? 'vendor@groceryapp.com';
+    final String phone = _userData['phone'] ?? '';
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(20, 30, 20, 30),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [primaryGreen, darkGreen],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(36),
+                bottomRight: Radius.circular(36),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: darkGreen.withOpacity(0.2),
+                  blurRadius: 15,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 3),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: CircleAvatar(
+                    radius: 45,
+                    backgroundColor: Colors.white.withOpacity(0.3),
+                    backgroundImage: profilePicture.isNotEmpty
+                        ? NetworkImage(profilePicture)
+                        : null,
+                    child: profilePicture.isEmpty
+                        ? const Icon(
+                            Icons.storefront_rounded,
+                            color: Colors.white,
+                            size: 45,
+                          )
+                        : null,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  shopName,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: goldAccent,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.verified_rounded,
+                        size: 12,
+                        color: Colors.black87,
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        'PRO MERCHANT',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (email.isNotEmpty || phone.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    email.isNotEmpty ? email : phone,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.85),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 30),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Account Settings',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                _buildSettingsTile(
+                  icon: Icons.inventory_2_rounded,
+                  title: 'My Products',
+                  subtitle: 'Manage inventory, prices, & active status',
+                  iconBgColor: lightGreen,
+                  iconColor: primaryGreen,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ManageProductsPage(),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                _buildSettingsTile(
+                  icon: Icons.location_on_rounded,
+                  title: 'My Addresses',
+                  subtitle: 'Manage shop address & delivery locations',
+                  iconBgColor: lightGreen,
+                  iconColor: primaryGreen,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AddressPage()),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                _buildSettingsTile(
+                  icon: Icons.phone_android_rounded,
+                  title: 'Change Phone Number',
+                  subtitle: 'Update your registered merchant contact number',
+                  iconBgColor: lightGreen,
+                  iconColor: primaryGreen,
+                  onTap: () async {
+                    final updated = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ChangePhonePage(
+                          currentPhone: _userData['phone'] ?? '',
+                        ),
+                      ),
+                    );
+                    if (updated == true) {
+                      _loadUserData();
+                    }
+                  },
+                ),
+
+                const SizedBox(height: 30),
+
+                const Text(
+                  'System',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                _buildSettingsTile(
+                  icon: Icons.logout_rounded,
+                  title: 'Logout',
+                  subtitle: 'Sign out of your vendor account securely',
+                  iconBgColor: const Color(0xFFFFEBEE),
+                  iconColor: Colors.redAccent,
+                  isDestructive: true,
+                  onTap: _logout,
+                ),
+
+                const SizedBox(height: 40),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildRecentOrders() {
-    final List<Map<String, dynamic>> orders = [
-      {'id': '#12480', 'customer': 'Sarah Jenkins', 'items': '4 items', 'total': '\$34.50', 'time': '10 mins ago', 'status': 'Pending', 'statusColor': goldAccent},
-      {'id': '#12479', 'customer': 'David Miller', 'items': '2 items', 'total': '\$18.20', 'time': '25 mins ago', 'status': 'Preparing', 'statusColor': const Color(0xFF00BCD4)},
-      {'id': '#12478', 'customer': 'Emma Watson', 'items': '7 items', 'total': '\$62.00', 'time': '1 hr ago', 'status': 'Out for Delivery', 'statusColor': const Color(0xFF673AB7)},
-      {'id': '#12477', 'customer': 'Robert Downey', 'items': '5 items', 'total': '\$41.10', 'time': '2 hrs ago', 'status': 'Delivered', 'statusColor': primaryGreen},
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Recent Orders Stream',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
-              ),
-              Text(
-                'View All',
-                style: TextStyle(
-                  color: primaryGreen,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: orders.length,
-            itemBuilder: (context, index) {
-              final order = orders[index];
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.green.shade50),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.green.withOpacity(0.03),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: order['statusColor'].withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Icon(Icons.local_shipping_rounded, color: order['statusColor'], size: 22),
-                        ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  order['id'],
-                                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  '• ${order['time']}',
-                                  style: TextStyle(color: Colors.grey.shade400, fontSize: 11, fontWeight: FontWeight.w500),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              '${order['customer']} (${order['items']})',
-                              style: TextStyle(color: Colors.grey.shade600, fontSize: 12.5, fontWeight: FontWeight.w500),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          order['total'],
-                          style: TextStyle(fontWeight: FontWeight.w900, color: primaryGreen, fontSize: 15),
-                        ),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: order['statusColor'].withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            order['status'],
-                            style: TextStyle(
-                              color: order['statusColor'],
-                              fontSize: 9,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
+  Widget _buildSettingsTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color iconBgColor,
+    required Color iconColor,
+    required VoidCallback onTap,
+    bool isDestructive = false,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: isDestructive ? Colors.red.shade100 : Colors.green.shade50,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (isDestructive ? Colors.red : primaryGreen).withOpacity(
+              0.04,
+            ),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(22),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: iconBgColor,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(icon, color: iconColor, size: 24),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          color: isDestructive
+                              ? Colors.red.shade700
+                              : darkGreen,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: isDestructive
+                      ? Colors.red.shade300
+                      : primaryGreen.withOpacity(0.6),
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -666,7 +739,7 @@ class _ShopHomePageState extends State<ShopHomePage> {
       {'icon': Icons.dashboard_rounded, 'label': 'Dashboard'},
       {'icon': Icons.receipt_long_rounded, 'label': 'Orders'},
       {'icon': Icons.inventory_2_rounded, 'label': 'Products'},
-      {'icon': Icons.location_on_rounded, 'label': 'Addresses'},
+      {'icon': Icons.settings, 'label': 'Settings'},
     ];
 
     return Container(
@@ -692,15 +765,7 @@ class _ShopHomePageState extends State<ShopHomePage> {
             final active = _activeNavIndex == index;
             final item = navItems[index];
             return InkWell(
-              onTap: () async {
-                if (index == 3) {
-                  // Addresses tab
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const AddressPage()),
-                  );
-                  return;
-                }
+              onTap: () {
                 setState(() {
                   _activeNavIndex = index;
                 });
@@ -708,7 +773,10 @@ class _ShopHomePageState extends State<ShopHomePage> {
               borderRadius: BorderRadius.circular(20),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: active ? lightGreen : Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
@@ -747,27 +815,13 @@ class _ShopHomePageState extends State<ShopHomePage> {
     if (_isLoading) {
       return Scaffold(
         backgroundColor: background,
-        body: Center(
-          child: CircularProgressIndicator(color: primaryGreen),
-        ),
+        body: Center(child: CircularProgressIndicator(color: primaryGreen)),
       );
     }
 
     return Scaffold(
       backgroundColor: background,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(),
-              _buildMetricsGrid(),
-              _buildRecentOrders(),
-              const SizedBox(height: 24),
-            ],
-          ),
-        ),
-      ),
+      body: SafeArea(child: _buildBody()),
       bottomNavigationBar: _buildBottomNavBar(),
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:grocery_app/views/Admin/admin_settings_page.dart';
 import 'package:grocery_app/views/Admin/shop_owners_page.dart';
 import 'package:grocery_app/views/Admin/manage_categories_page.dart';
+import 'package:grocery_app/views/Admin/manage_payment_methods_page.dart';
 import '../../services/api_service.dart';
 import '../request_otp_page.dart';
 
@@ -243,6 +244,17 @@ class _AdminHomePageState extends State<AdminHomePage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const ManageCategoriesPage()),
+              );
+            },
+          ),
+          buildDashboardCard(
+            icon: Icons.payment_rounded,
+            title: 'Manage Payment Methods',
+            subtitle: 'Configure and enable store checkout gateways',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ManagePaymentMethodsPage()),
               );
             },
           ),

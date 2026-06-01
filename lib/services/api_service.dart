@@ -14,6 +14,7 @@ import '../models/shop_approval_model.dart';
 import '../models/shop_model.dart';
 import '../models/category_model.dart';
 import '../models/cart_item_model.dart';
+import '../models/payment_method_model.dart';
 
 class ApiService {
   // ─── OTP ────────────────────────────────────────────────────
@@ -41,7 +42,8 @@ class ApiService {
     } else {
       String errorMessage = "OTP request failed";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -95,7 +97,8 @@ class ApiService {
     } else {
       String errorMessage = "OTP verification failed";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -139,7 +142,10 @@ class ApiService {
 
     if (profilePicturePath != null && profilePicturePath.isNotEmpty) {
       request.files.add(
-        await http.MultipartFile.fromPath('profile_picture', profilePicturePath),
+        await http.MultipartFile.fromPath(
+          'profile_picture',
+          profilePicturePath,
+        ),
       );
     }
 
@@ -159,7 +165,8 @@ class ApiService {
     } else {
       String errorMessage = "Registration failed";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -181,9 +188,12 @@ class ApiService {
     await prefs.setString('approval_status', response.user.approvalStatus);
     await prefs.setString('profile_picture', response.user.profilePicture);
 
-    if (response.user.country != null) await prefs.setInt('country', response.user.country!);
-    if (response.user.state != null) await prefs.setInt('state', response.user.state!);
-    if (response.user.district != null) await prefs.setInt('district', response.user.district!);
+    if (response.user.country != null)
+      await prefs.setInt('country', response.user.country!);
+    if (response.user.state != null)
+      await prefs.setInt('state', response.user.state!);
+    if (response.user.district != null)
+      await prefs.setInt('district', response.user.district!);
   }
 
   Future<Map<String, dynamic>> getSavedUserData() async {
@@ -266,7 +276,8 @@ class ApiService {
     } else {
       String errorMessage = "Failed to load countries";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -294,7 +305,8 @@ class ApiService {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to add country";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -310,7 +322,9 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
-    final url = Uri.parse('${ApiConstants.api}api/grocery/countries/update/$id/');
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/countries/update/$id/',
+    );
 
     final response = await http.put(
       url,
@@ -331,7 +345,9 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
-    final url = Uri.parse('${ApiConstants.api}api/grocery/countries/update/$id/');
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/countries/update/$id/',
+    );
 
     final response = await http.delete(
       url,
@@ -550,7 +566,9 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
-    final url = Uri.parse('${ApiConstants.api}api/grocery/districts/update/$id/');
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/districts/update/$id/',
+    );
 
     final response = await http.put(
       url,
@@ -571,7 +589,9 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
-    final url = Uri.parse('${ApiConstants.api}api/grocery/districts/update/$id/');
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/districts/update/$id/',
+    );
 
     final response = await http.delete(
       url,
@@ -612,7 +632,8 @@ class ApiService {
     if (response.statusCode == 200) {
       if (decoded is List) {
         return decoded.map((item) => StateModel.fromJson(item)).toList();
-      } else if (decoded is Map<String, dynamic> && decoded['results'] is List) {
+      } else if (decoded is Map<String, dynamic> &&
+          decoded['results'] is List) {
         final List results = decoded['results'];
         return results.map((item) => StateModel.fromJson(item)).toList();
       }
@@ -622,7 +643,9 @@ class ApiService {
     }
   }
 
-  Future<List<DistrictModel>> getDistrictsByState({required int stateId}) async {
+  Future<List<DistrictModel>> getDistrictsByState({
+    required int stateId,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
@@ -647,7 +670,8 @@ class ApiService {
     if (response.statusCode == 200) {
       if (decoded is List) {
         return decoded.map((item) => DistrictModel.fromJson(item)).toList();
-      } else if (decoded is Map<String, dynamic> && decoded['results'] is List) {
+      } else if (decoded is Map<String, dynamic> &&
+          decoded['results'] is List) {
         final List results = decoded['results'];
         return results.map((item) => DistrictModel.fromJson(item)).toList();
       }
@@ -709,7 +733,8 @@ class ApiService {
     } else {
       String errorMessage = "Failed to load shop approvals";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -724,7 +749,9 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
-    final url = Uri.parse('${ApiConstants.api}api/grocery/shop/approval/$userId/');
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/shop/approval/$userId/',
+    );
     final body = {"approval_status": status};
 
     print("SHOP APPROVAL PATCH URL: $url");
@@ -748,7 +775,8 @@ class ApiService {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to update approval status";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -758,7 +786,10 @@ class ApiService {
 
   // ─── Categories ──────────────────────────────────────────────
 
-  Future<Map<String, dynamic>> getCategories({int? page, String? search}) async {
+  Future<Map<String, dynamic>> getCategories({
+    int? page,
+    String? search,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
@@ -810,7 +841,8 @@ class ApiService {
     } else {
       String errorMessage = "Failed to load categories";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -840,7 +872,8 @@ class ApiService {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to add category";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -856,7 +889,9 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
-    final url = Uri.parse('${ApiConstants.api}api/grocery/categories/update/$id/');
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/categories/update/$id/',
+    );
 
     final response = await http.put(
       url,
@@ -871,7 +906,8 @@ class ApiService {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to update category";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -883,7 +919,9 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
-    final url = Uri.parse('${ApiConstants.api}api/grocery/categories/update/$id/');
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/categories/update/$id/',
+    );
 
     final response = await http.delete(
       url,
@@ -897,7 +935,8 @@ class ApiService {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to delete category";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -927,14 +966,16 @@ class ApiService {
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final decoded = jsonDecode(response.body);
-      final List<dynamic> items =
-          decoded is List ? decoded : (decoded['results'] ?? []);
+      final List<dynamic> items = decoded is List
+          ? decoded
+          : (decoded['results'] ?? []);
       return items.map((e) => ProductModel.fromJson(e)).toList();
     } else {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to load products";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -1070,7 +1111,8 @@ class ApiService {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to delete product";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -1101,14 +1143,16 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
-      final List<dynamic> items =
-          decoded is List ? decoded : (decoded['results'] ?? []);
+      final List<dynamic> items = decoded is List
+          ? decoded
+          : (decoded['results'] ?? []);
       return items.map((e) => AddressModel.fromJson(e)).toList();
     } else {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to load addresses";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -1160,7 +1204,8 @@ class ApiService {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to add address";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -1182,7 +1227,8 @@ class ApiService {
     final token = prefs.getString('access') ?? '';
 
     final url = Uri.parse(
-        '${ApiConstants.api}api/grocery/addresses/update/$addressId/');
+      '${ApiConstants.api}api/grocery/addresses/update/$addressId/',
+    );
     final body = {
       "address": address,
       "landmark": landmark,
@@ -1214,7 +1260,8 @@ class ApiService {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to update address";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -1227,7 +1274,8 @@ class ApiService {
     final token = prefs.getString('access') ?? '';
 
     final url = Uri.parse(
-        '${ApiConstants.api}api/grocery/addresses/update/$addressId/');
+      '${ApiConstants.api}api/grocery/addresses/update/$addressId/',
+    );
 
     print("DELETE ADDRESS URL: $url");
 
@@ -1245,7 +1293,8 @@ class ApiService {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to delete address";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -1275,14 +1324,16 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
-      final List<dynamic> items =
-          decoded is List ? decoded : (decoded['results'] ?? []);
+      final List<dynamic> items = decoded is List
+          ? decoded
+          : (decoded['results'] ?? []);
       return items.map((e) => ShopModel.fromJson(e)).toList();
     } else {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to load shops";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -1295,7 +1346,8 @@ class ApiService {
     final token = prefs.getString('access') ?? '';
 
     final url = Uri.parse(
-        '${ApiConstants.api}api/grocery/products/by/shop/$shopId/');
+      '${ApiConstants.api}api/grocery/products/by/shop/$shopId/',
+    );
     print("GET PRODUCTS BY SHOP URL: $url");
 
     final response = await http.get(
@@ -1311,19 +1363,150 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final decoded = jsonDecode(response.body);
-      final List<dynamic> items =
-          decoded is List ? decoded : (decoded['results'] ?? []);
+      final List<dynamic> items = decoded is List
+          ? decoded
+          : (decoded['results'] ?? []);
       return items.map((e) => ProductModel.fromJson(e)).toList();
     } else {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to load shop products";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
       throw Exception(errorMessage);
     }
+  }
+
+  // ─── Change Phone Number ─────────────────────────────────────
+
+  Future<Map<String, dynamic>> requestOldPhoneOtp({
+    required String oldPhone,
+    required String newPhone,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/change/phone/request/old/otp/',
+    );
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode({
+        "old_phone": oldPhone,
+        "new_phone": newPhone,
+      }),
+    );
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return decoded;
+    }
+
+    throw Exception(
+      decoded['detail'] ?? decoded['message'] ?? "Requesting old OTP failed",
+    );
+  }
+
+  Future<Map<String, dynamic>> verifyOldPhoneOtp({
+    required String oldOtp,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/change/phone/verify/old/otp/',
+    );
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode({"otp": oldOtp}),
+    );
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return decoded;
+    }
+
+    throw Exception(
+      decoded['detail'] ?? decoded['message'] ?? "Verifying old OTP failed",
+    );
+  }
+
+  Future<Map<String, dynamic>> requestNewPhoneOtp({
+    required String newPhone,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/change/phone/request/new/otp/',
+    );
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode({"new_phone": newPhone}),
+    );
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return decoded;
+    }
+
+    throw Exception(
+      decoded['detail'] ?? decoded['message'] ?? "Requesting new OTP failed",
+    );
+  }
+
+  Future<Map<String, dynamic>> verifyNewPhoneOtp({
+    required String newOtp,
+    required String newPhone,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/change/phone/verify/new/otp/',
+    );
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode({"otp": newOtp}),
+    );
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final updatedPhone = decoded['new_phone']?.toString() ?? newPhone;
+      await prefs.setString('phone', updatedPhone);
+      return decoded;
+    }
+
+    throw Exception(
+      decoded['detail'] ?? decoded['message'] ?? "Verifying new OTP failed",
+    );
   }
 
   // ─── Shops by Category ──────────────────────────────────────
@@ -1526,14 +1709,17 @@ class ApiService {
     }
   }
 
-  Future<void> deleteCartItem({required int cartItemId}) async {
+Future<void> deleteCartItem({required int productId}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
-    final url = Uri.parse('${ApiConstants.api}api/grocery/cart/view/$cartItemId/');
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/cart/remove/$productId/',
+    );
     print("DELETE CART ITEM URL: $url");
 
-    final response = await http.delete(
+    // Try HTTP DELETE first
+    var response = await http.delete(
       url,
       headers: {
         "Content-Type": "application/json",
@@ -1544,9 +1730,212 @@ class ApiService {
     print("DELETE CART ITEM STATUS CODE: ${response.statusCode}");
     print("DELETE CART ITEM RESPONSE: ${response.body}");
 
-    if (response.statusCode != 200 && response.statusCode != 204 && response.statusCode != 201) {
+    // If DELETE fails with 405 Method Not Allowed, try POST as a fallback
+    if (response.statusCode == 405) {
+      print("DELETE returned 405, trying POST as fallback...");
+      response = await http.post(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
+      print(
+        "DELETE CART ITEM (POST FALLBACK) STATUS CODE: ${response.statusCode}",
+      );
+      print("DELETE CART ITEM (POST FALLBACK) RESPONSE: ${response.body}");
+    }
+
+    if (response.statusCode != 200 &&
+        response.statusCode != 204 &&
+        response.statusCode != 201) {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to delete cart item";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage =
+            decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+  // ─── Admin Payment Methods ────────────────────────────────────
+
+  Future<List<PaymentMethodModel>> getPaymentMethods() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/payment/methods/view/');
+    print("GET PAYMENT METHODS URL: $url");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("GET PAYMENT METHODS STATUS CODE: ${response.statusCode}");
+    print("GET PAYMENT METHODS RESPONSE: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final List<dynamic> items =
+          decoded is List ? decoded : (decoded['results'] ?? []);
+      return items.map((e) => PaymentMethodModel.fromJson(e)).toList();
+    } else {
+      String errorMessage = "Failed to load payment methods";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<PaymentMethodModel> createPaymentMethod({
+    required String name,
+    required String code,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/payment/methods/view/');
+    final body = {
+      "name": name,
+      "code": code,
+    };
+
+    print("CREATE PAYMENT METHOD URL: $url");
+    print("CREATE PAYMENT METHOD BODY: $body");
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(body),
+    );
+
+    print("CREATE PAYMENT METHOD STATUS CODE: ${response.statusCode}");
+    print("CREATE PAYMENT METHOD RESPONSE: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return PaymentMethodModel.fromJson(decoded);
+    } else {
+      String errorMessage = "Failed to create payment method";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<PaymentMethodModel> getPaymentMethodDetails({required int id}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/payment/methods/update/$id/');
+    print("GET PAYMENT METHOD DETAILS URL: $url");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("GET PAYMENT METHOD DETAILS STATUS CODE: ${response.statusCode}");
+    print("GET PAYMENT METHOD DETAILS RESPONSE: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return PaymentMethodModel.fromJson(decoded);
+    } else {
+      String errorMessage = "Failed to load payment method details";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<PaymentMethodModel> updatePaymentMethod({
+    required int id,
+    required String name,
+    required String code,
+    required bool isActive,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/payment/methods/update/$id/');
+    final body = {
+      "name": name,
+      "code": code,
+      "is_active": isActive,
+    };
+
+    print("UPDATE PAYMENT METHOD URL: $url");
+    print("UPDATE PAYMENT METHOD BODY: $body");
+
+    final response = await http.put(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(body),
+    );
+
+    print("UPDATE PAYMENT METHOD STATUS CODE: ${response.statusCode}");
+    print("UPDATE PAYMENT METHOD RESPONSE: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return PaymentMethodModel.fromJson(decoded);
+    } else {
+      String errorMessage = "Failed to update payment method";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<void> deletePaymentMethod({required int id}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/payment/methods/update/$id/');
+    print("DELETE PAYMENT METHOD URL: $url");
+
+    final response = await http.delete(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("DELETE PAYMENT METHOD STATUS CODE: ${response.statusCode}");
+    print("DELETE PAYMENT METHOD RESPONSE: ${response.body}");
+
+    if (response.statusCode != 200 && response.statusCode != 204 && response.statusCode != 201) {
+      final decoded = jsonDecode(response.body);
+      String errorMessage = "Failed to delete payment method";
       if (decoded is Map<String, dynamic>) {
         errorMessage = decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
