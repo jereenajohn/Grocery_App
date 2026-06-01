@@ -1,3 +1,5 @@
+import '../constants/api_constants.dart';
+
 class ProductModel {
   final int id;
   final int category;
@@ -30,6 +32,14 @@ class ProductModel {
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
+    String? imgUrl = json['image'];
+    if (imgUrl != null && imgUrl.isNotEmpty) {
+      if (!imgUrl.startsWith('http://') && !imgUrl.startsWith('https://')) {
+        imgUrl = imgUrl.startsWith('/')
+            ? '${ApiConstants.api}${imgUrl.substring(1)}'
+            : '${ApiConstants.api}$imgUrl';
+      }
+    }
     return ProductModel(
       id: json['id'],
       category: json['category'],
@@ -42,7 +52,7 @@ class ProductModel {
       lowStockThreshold: (json['low_stock_threshold'] as num?)?.toDouble() ?? 0.0,
       lowStockWarning: json['low_stock_warning'] ?? false,
       stockDisplay: json['stock_display'] ?? '',
-      image: json['image'],
+      image: imgUrl,
       createdAt: json['created_at'] ?? '',
     );
   }
