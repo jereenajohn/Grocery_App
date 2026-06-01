@@ -1,3 +1,3 @@
 class ApiConstants {
-  static const String api = 'https://freelance-temporal-excitement-latex.trycloudflare.com/';
+  static const String api = 'https://organizational-and-engine-willow.trycloudflare.com/';
   }

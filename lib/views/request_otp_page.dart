@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../services/auth_service.dart';
+import '../services/api_service.dart';
 import 'verify_otp_page.dart';
 
 class RequestOtpPage extends StatefulWidget {
@@ -14,7 +14,7 @@ class _RequestOtpPageState extends State<RequestOtpPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController phoneController = TextEditingController();
 
-  final AuthService _authService = AuthService();
+  final ApiService _apiService = ApiService();
 
   bool isLoading = false;
 
@@ -36,7 +36,7 @@ class _RequestOtpPageState extends State<RequestOtpPage> {
     });
 
     try {
-      final response = await _authService.requestOtp(
+      final response = await _apiService.requestOtp(
         phone: phoneController.text.trim(),
       );
 

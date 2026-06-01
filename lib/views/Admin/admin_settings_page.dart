@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:grocery_app/views/Admin/add_country_page.dart';
 import 'package:grocery_app/views/Admin/add_district_page.dart';
-import 'package:grocery_app/views/Admin/view_district_page.dart';
-
-import 'view_country_page.dart';
 import 'add_state_page.dart';
-import 'view_state_page.dart';
 
 class AdminSettingsPage extends StatelessWidget {
   const AdminSettingsPage({super.key});
@@ -133,13 +129,7 @@ class AdminSettingsPage extends StatelessWidget {
                       icon: Icons.add_location_alt_rounded,
                       page: const AddCountryPage(),
                     ),
-                    menuTile(
-                      context: context,
-                      title: 'View Countries',
-                      subtitle: 'See all saved countries',
-                      icon: Icons.public_rounded,
-                      page: const ViewCountryPage(),
-                    ),
+
                     menuTile(
                       context: context,
                       title: 'Add State',
@@ -147,26 +137,13 @@ class AdminSettingsPage extends StatelessWidget {
                       icon: Icons.add_business_rounded,
                       page: const AddStatePage(),
                     ),
-                    menuTile(
-                      context: context,
-                      title: 'View States',
-                      subtitle: 'See all saved states',
-                      icon: Icons.map_rounded,
-                      page: const ViewStatePage(),
-                    ),
+
                     menuTile(
                       context: context,
                       title: 'Add District',
                       subtitle: 'Create district under state',
                       icon: Icons.add_home_work_rounded,
                       page: const AddDistrictPage(),
-                    ),
-                    menuTile(
-                      context: context,
-                      title: 'View Districts',
-                      subtitle: 'See all saved districts',
-                      icon: Icons.location_on_rounded,
-                      page: const ViewDistrictPage(),
                     ),
                   ],
                 ),

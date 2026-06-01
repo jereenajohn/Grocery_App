@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-
-import '../services/auth_service.dart';
+import '../services/api_service.dart';
 import 'Admin/admin_home_page.dart';
 import 'Admin/register_page.dart';
+import 'User/user_home_page.dart';
+import 'Shop/shop_home_page.dart';
+
 
 class VerifyOtpPage extends StatefulWidget {
   final String phone;
@@ -20,8 +22,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController otpController = TextEditingController();
 
-  final AuthService _authService = AuthService();
-
+  final ApiService _apiService = ApiService();
   bool isLoading = false;
 
   final Color primaryGreen = const Color(0xFF1B8F3A);
@@ -42,7 +43,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
     });
 
     try {
-      final response = await _authService.verifyOtp(
+      final response = await _apiService.verifyOtp(
         phone: widget.phone,
         otp: otpController.text.trim(),
       );
@@ -66,13 +67,38 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
       final String userType =
           user is Map<String, dynamic> ? user['user_type']?.toString() ?? '' : '';
 
-      if (firstTime == false && userType == 'admin') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const AdminHomePage(),
-          ),
-        );
+      if (firstTime == false) {
+        if (userType == 'admin') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const AdminHomePage(),
+            ),
+          );
+        } else if (userType == 'shop') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const ShopHomePage(),
+            ),
+          );
+        } else if (userType == 'user') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const UserHomePage(),
+            ),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RegisterPage(
+                verifiedPhone: widget.phone,
+              ),
+            ),
+          );
+        }
       } else {
         Navigator.pushReplacement(
           context,
@@ -106,7 +132,7 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
     });
 
     try {
-      final response = await _authService.requestOtp(
+      final response = await _apiService.requestOtp(
         phone: widget.phone,
       );
 
