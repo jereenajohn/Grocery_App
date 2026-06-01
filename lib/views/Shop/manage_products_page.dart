@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../services/api_service.dart';
 import '../../models/product_model.dart';
 import '../../models/category_model.dart';
@@ -79,6 +81,237 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
     }
   }
 
+  Future<File?> _pickImage(ImageSource source) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: source,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
+    if (picked != null) {
+      return File(picked.path);
+    }
+    return null;
+  }
+
+  void _showImageSourcePicker({
+    required void Function(File) onPicked,
+    required StateSetter setDialogState,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Text(
+                'Select Image Source',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _imageSourceOption(
+                    icon: Icons.camera_alt_rounded,
+                    label: 'Camera',
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      final file = await _pickImage(ImageSource.camera);
+                      if (file != null) onPicked(file);
+                    },
+                  ),
+                  _imageSourceOption(
+                    icon: Icons.photo_library_rounded,
+                    label: 'Gallery',
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      final file = await _pickImage(ImageSource.gallery);
+                      if (file != null) onPicked(file);
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _imageSourceOption({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: lightGreen,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Icon(icon, color: primaryGreen, size: 30),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              color: Colors.grey.shade700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImagePickerWidget({
+    File? selectedImage,
+    String? existingImageUrl,
+    required VoidCallback onTap,
+    required VoidCallback onClear,
+  }) {
+    final hasImage =
+        selectedImage != null ||
+        (existingImageUrl != null && existingImageUrl.isNotEmpty);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabel('Product Image'),
+        const SizedBox(height: 6),
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            height: 140,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: lightGreen.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: hasImage
+                    ? primaryGreen.withOpacity(0.3)
+                    : Colors.grey.shade200,
+                width: hasImage ? 1.5 : 1,
+              ),
+            ),
+            child: hasImage
+                ? Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(15),
+                        child: selectedImage != null
+                            ? Image.file(
+                                selectedImage,
+                                width: double.infinity,
+                                height: 140,
+                                fit: BoxFit.cover,
+                              )
+                            : Image.network(
+                                existingImageUrl!,
+                                width: double.infinity,
+                                height: 140,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Center(
+                                  child: Icon(
+                                    Icons.broken_image_rounded,
+                                    color: Colors.grey.shade400,
+                                    size: 40,
+                                  ),
+                                ),
+                              ),
+                      ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: GestureDetector(
+                          onTap: onClear,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.6),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close_rounded,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.6),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            'Change',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.add_photo_alternate_rounded,
+                        size: 36,
+                        color: primaryGreen.withOpacity(0.5),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tap to add product image',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
   void _showAddProductDialog() {
     final nameController = TextEditingController();
     final descController = TextEditingController();
@@ -90,6 +323,7 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
     int? selectedCategoryId;
     String selectedUnit = _unitOptions[0];
     bool isSaving = false;
+    File? selectedImage;
 
     showDialog(
       context: context,
@@ -156,6 +390,20 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                   const SizedBox(height: 20),
                   const Divider(height: 1),
                   const SizedBox(height: 20),
+
+                  // Image Picker
+                  _buildImagePickerWidget(
+                    selectedImage: selectedImage,
+                    onTap: () => _showImageSourcePicker(
+                      setDialogState: setDialogState,
+                      onPicked: (file) {
+                        setDialogState(() => selectedImage = file);
+                      },
+                    ),
+                    onClear: () {
+                      setDialogState(() => selectedImage = null);
+                    },
+                  ),
 
                   // Category Dropdown
                   _buildLabel('Category *'),
@@ -273,7 +521,7 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Stock & Threshold (side by side)
+                  // Stock
                   Row(
                     children: [
                       Expanded(
@@ -303,26 +551,6 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                           ],
                         ),
                       ),
-                      // const SizedBox(width: 12),
-                      // Expanded(
-                      //   child: Column(
-                      //     crossAxisAlignment: CrossAxisAlignment.start,
-                      //     children: [
-                      //       _buildLabel('Low Stock Alert'),
-                      //       const SizedBox(height: 6),
-                      //       TextFormField(
-                      //         controller: thresholdController,
-                      //         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      //         decoration: _inputDecoration('e.g. 10', Icons.warning_amber_rounded),
-                      //         validator: (v) {
-                      //           if (v == null || v.trim().isEmpty) return 'Required';
-                      //           if (double.tryParse(v) == null) return 'Invalid';
-                      //           return null;
-                      //         },
-                      //       ),
-                      //     ],
-                      //   ),
-                      // ),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -379,6 +607,7 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                                       lowStockThreshold: double.parse(
                                         thresholdController.text.trim(),
                                       ),
+                                      image: selectedImage,
                                     );
 
                                     if (mounted) Navigator.pop(context);
@@ -441,6 +670,460 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _showEditProductDialog(ProductModel product) {
+    final nameController = TextEditingController(text: product.name);
+    final descController = TextEditingController(text: product.description);
+    final priceController = TextEditingController(text: product.price);
+    final stockController = TextEditingController(
+      text: product.stock.toString(),
+    );
+    final thresholdController = TextEditingController(
+      text: product.lowStockThreshold.toString(),
+    );
+    final formKey = GlobalKey<FormState>();
+
+    int? selectedCategoryId = product.category;
+    String selectedUnit = _unitOptions.contains(product.unit)
+        ? product.unit
+        : _unitOptions[0];
+    bool isSaving = false;
+    File? selectedImage;
+    String? existingImageUrl = product.image;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 22,
+                        backgroundColor: lightGreen,
+                        child: Icon(
+                          Icons.edit_rounded,
+                          color: primaryGreen,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Edit Product',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 18,
+                              ),
+                            ),
+                            Text(
+                              'Update the product details',
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(
+                          Icons.close_rounded,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  const Divider(height: 1),
+                  const SizedBox(height: 20),
+
+                  // Image Picker
+                  _buildImagePickerWidget(
+                    selectedImage: selectedImage,
+                    existingImageUrl: existingImageUrl,
+                    onTap: () => _showImageSourcePicker(
+                      setDialogState: setDialogState,
+                      onPicked: (file) {
+                        setDialogState(() {
+                          selectedImage = file;
+                          existingImageUrl = null;
+                        });
+                      },
+                    ),
+                    onClear: () {
+                      setDialogState(() {
+                        selectedImage = null;
+                        existingImageUrl = null;
+                      });
+                    },
+                  ),
+
+                  // Category Dropdown
+                  _buildLabel('Category *'),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<int>(
+                    value: selectedCategoryId,
+                    decoration: _inputDecoration(
+                      'Select category',
+                      Icons.category_rounded,
+                    ),
+                    items: _categories
+                        .map(
+                          (c) => DropdownMenuItem(
+                            value: c.id,
+                            child: Text(c.name),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (val) =>
+                        setDialogState(() => selectedCategoryId = val),
+                    validator: (value) =>
+                        value == null ? 'Please select a category' : null,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Product Name
+                  _buildLabel('Product Name *'),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: nameController,
+                    decoration: _inputDecoration(
+                      'e.g. Premium Basmati Rice',
+                      Icons.shopping_bag_rounded,
+                    ),
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Enter product name'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Description
+                  _buildLabel('Description'),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: descController,
+                    maxLines: 3,
+                    decoration: _inputDecoration(
+                      'Product description...',
+                      Icons.description_rounded,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Price & Unit
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildLabel('Price *'),
+                            const SizedBox(height: 6),
+                            TextFormField(
+                              controller: priceController,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              decoration: _inputDecoration(
+                                '0.00',
+                                Icons.attach_money_rounded,
+                              ),
+                              validator: (v) {
+                                if (v == null || v.trim().isEmpty)
+                                  return 'Required';
+                                if (double.tryParse(v) == null)
+                                  return 'Invalid';
+                                return null;
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildLabel('Unit *'),
+                            const SizedBox(height: 6),
+                            DropdownButtonFormField<String>(
+                              value: selectedUnit,
+                              decoration: _inputDecoration(
+                                'Unit',
+                                Icons.scale_rounded,
+                              ),
+                              items: _unitOptions
+                                  .map(
+                                    (u) => DropdownMenuItem(
+                                      value: u,
+                                      child: Text(u),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (val) =>
+                                  setDialogState(() => selectedUnit = val!),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Stock
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildLabel('Stock Qty *'),
+                            const SizedBox(height: 6),
+                            TextFormField(
+                              controller: stockController,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                              decoration: _inputDecoration(
+                                'e.g. 50',
+                                Icons.inventory_2_rounded,
+                              ),
+                              validator: (v) {
+                                if (v == null || v.trim().isEmpty)
+                                  return 'Required';
+                                if (double.tryParse(v) == null)
+                                  return 'Invalid';
+                                return null;
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Action Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.grey.shade600,
+                            side: BorderSide(color: Colors.grey.shade300),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text(
+                            'Cancel',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryGreen,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          onPressed: isSaving
+                              ? null
+                              : () async {
+                                  if (!formKey.currentState!.validate()) return;
+                                  setDialogState(() => isSaving = true);
+
+                                  try {
+                                    await _apiService.updateProduct(
+                                      productId: product.id,
+                                      categoryId: selectedCategoryId!,
+                                      name: nameController.text.trim(),
+                                      description: descController.text.trim(),
+                                      price: priceController.text.trim(),
+                                      stock: double.parse(
+                                        stockController.text.trim(),
+                                      ),
+                                      unit: selectedUnit,
+                                      lowStockThreshold: double.parse(
+                                        thresholdController.text.trim(),
+                                      ),
+                                      image: selectedImage,
+                                    );
+
+                                    if (mounted) Navigator.pop(context);
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: const Text(
+                                            'Product updated successfully!',
+                                          ),
+                                          backgroundColor: primaryGreen,
+                                          behavior: SnackBarBehavior.floating,
+                                        ),
+                                      );
+                                    }
+                                    _fetchProducts();
+                                  } catch (e) {
+                                    setDialogState(() => isSaving = false);
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            e
+                                                .toString()
+                                                .replaceAll('Exception:', '')
+                                                .trim(),
+                                          ),
+                                          backgroundColor: Colors.red,
+                                          behavior: SnackBarBehavior.floating,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                          child: isSaving
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  'Update Product',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteConfirmationDialog(ProductModel product) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.red.shade600),
+            const SizedBox(width: 10),
+            const Text(
+              'Delete Product',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to delete "${product.name}"? This action cannot be undone.',
+          style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () async {
+              Navigator.pop(context);
+              setState(() => _isLoading = true);
+              try {
+                await _apiService.deleteProduct(productId: product.id);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('"${product.name}" deleted successfully!'),
+                      backgroundColor: Colors.red.shade600,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+                _fetchProducts();
+              } catch (e) {
+                setState(() => _isLoading = false);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        e.toString().replaceAll('Exception:', '').trim(),
+                      ),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text(
+              'Delete',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -730,6 +1413,43 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      style: IconButton.styleFrom(
+                        backgroundColor: lightGreen,
+                        padding: const EdgeInsets.all(8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: Icon(
+                        Icons.edit_rounded,
+                        color: primaryGreen,
+                        size: 20,
+                      ),
+                      onPressed: () => _showEditProductDialog(p),
+                    ),
+                    const SizedBox(height: 8),
+                    IconButton(
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.red.shade50,
+                        padding: const EdgeInsets.all(8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: Icon(
+                        Icons.delete_outline_rounded,
+                        color: Colors.red.shade600,
+                        size: 20,
+                      ),
+                      onPressed: () => _showDeleteConfirmationDialog(p),
+                    ),
+                  ],
                 ),
               ],
             ),

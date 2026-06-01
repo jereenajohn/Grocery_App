@@ -1,3 +1,5 @@
+import '../constants/api_constants.dart';
+
 class ShopModel {
   final int id;
   final String phone;
@@ -44,6 +46,14 @@ class ShopModel {
   String get fullName => '$firstName $lastName'.trim();
 
   factory ShopModel.fromJson(Map<String, dynamic> json) {
+    String? profilePic = json['profile_picture']?.toString();
+    if (profilePic != null && profilePic.isNotEmpty) {
+      if (!profilePic.startsWith('http://') && !profilePic.startsWith('https://')) {
+        profilePic = profilePic.startsWith('/')
+            ? '${ApiConstants.api}${profilePic.substring(1)}'
+            : '${ApiConstants.api}$profilePic';
+      }
+    }
     return ShopModel(
       id: json['id'] ?? 0,
       phone: json['phone']?.toString() ?? '',
@@ -51,7 +61,7 @@ class ShopModel {
       firstName: json['first_name']?.toString() ?? '',
       lastName: json['last_name']?.toString() ?? '',
       shop_name: json['shop_name']?.toString() ?? '',
-      profilePicture: json['profile_picture']?.toString(),
+      profilePicture: profilePic,
       userType: json['user_type']?.toString() ?? '',
       approvalStatus: json['approval_status']?.toString() ?? '',
       isPhoneVerified: json['is_phone_verified'] ?? false,
