@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart';
+import '../../models/category_model.dart';
 import '../../models/product_model.dart';
 import '../../models/shop_model.dart';
 import '../../services/api_service.dart';
 
-class ShopProductsPage extends StatefulWidget {
+class ShopCategoryProductsPage extends StatefulWidget {
   final ShopModel shop;
-  const ShopProductsPage({super.key, required this.shop});
+  final CategoryModel category;
+  const ShopCategoryProductsPage({
+    super.key,
+    required this.shop,
+    required this.category,
+  });
 
   @override
-  State<ShopProductsPage> createState() => _ShopProductsPageState();
+  State<ShopCategoryProductsPage> createState() =>
+      _ShopCategoryProductsPageState();
 }
 
-class _ShopProductsPageState extends State<ShopProductsPage> {
+class _ShopCategoryProductsPageState extends State<ShopCategoryProductsPage> {
   final ApiService _apiService = ApiService();
 
   final Color primaryGreen = const Color(0xFF1B8F3A);
@@ -36,10 +43,13 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
       _error = null;
     });
     try {
-      final products =
-          await _apiService.getProductsByShop(shopId: widget.shop.id);
+      final result =
+          await _apiService.getProductsByShopPrioritizeCategory(
+        shopId: widget.shop.id,
+        categoryId: widget.category.id,
+      );
       setState(() {
-        _products = products;
+        _products = List<ProductModel>.from(result['results'] ?? []);
         _isLoading = false;
       });
     } catch (e) {
@@ -74,8 +84,9 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
 
   Widget _buildSliverAppBar() {
     final shop = widget.shop;
-    final initials = '${shop.firstName.isNotEmpty ? shop.firstName[0] : ''}${shop.lastName.isNotEmpty ? shop.lastName[0] : ''}'
-        .toUpperCase();
+    final initials =
+        '${shop.firstName.isNotEmpty ? shop.firstName[0] : ''}${shop.lastName.isNotEmpty ? shop.lastName[0] : ''}'
+            .toUpperCase();
 
     return SliverAppBar(
       expandedHeight: 200,
@@ -110,7 +121,6 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                 children: [
                   Row(
                     children: [
-                      // Avatar
                       Container(
                         width: 60,
                         height: 60,
@@ -153,7 +163,7 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              shop.fullName,
+                              shop.shop_name,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 20,
@@ -179,34 +189,13 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                           ],
                         ),
                       ),
-                      // Status badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: shop.approvalStatus == 'approved'
-                              ? Colors.green.shade400
-                              : shop.approvalStatus == 'pending'
-                                  ? goldAccent
-                                  : Colors.red.shade400,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          shop.approvalStatus.toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      _infoChip(Icons.storefront_rounded, 'Shop'),
+                      _infoChip(
+                          Icons.category_rounded, widget.category.name),
                       const SizedBox(width: 8),
                       _infoChip(Icons.inventory_2_rounded,
                           '${_products.length} Products'),
@@ -294,7 +283,8 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
             const Text('No Products Yet',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
             const SizedBox(height: 8),
-            Text('This shop hasn\'t listed any products.',
+            Text(
+                'This shop hasn\'t listed any products in ${widget.category.name}.',
                 style: TextStyle(color: Colors.grey.shade500),
                 textAlign: TextAlign.center),
           ],
@@ -323,13 +313,20 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
 
   Widget _buildProductCard(ProductModel product) {
     final bool lowStock = product.lowStockWarning;
+    final bool isTargetCategory =
+        product.category == widget.category.id;
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: lowStock ? Colors.orange.shade100 : Colors.green.shade50,
+          color: isTargetCategory
+              ? primaryGreen.withOpacity(0.3)
+              : lowStock
+                  ? Colors.orange.shade100
+                  : Colors.green.shade50,
+          width: isTargetCategory ? 1.5 : 1,
         ),
         boxShadow: [
           BoxShadow(
@@ -368,7 +365,7 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                   decoration: BoxDecoration(
-                    color: lightGreen,
+                    color: isTargetCategory ? primaryGreen.withOpacity(0.1) : lightGreen,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -376,7 +373,7 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                     style: TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.w800,
-                      color: darkGreen,
+                      color: isTargetCategory ? primaryGreen : darkGreen,
                     ),
                   ),
                 ),
@@ -470,7 +467,8 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
       'meat': Icons.restaurant_rounded,
       'drinks': Icons.local_drink_rounded,
     };
-    final icon = iconMap[category.toLowerCase()] ?? Icons.shopping_basket_rounded;
+    final icon =
+        iconMap[category.toLowerCase()] ?? Icons.shopping_basket_rounded;
     return Center(
       child: Icon(icon, size: 44, color: primaryGreen.withOpacity(0.4)),
     );

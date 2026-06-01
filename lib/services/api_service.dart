@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:grocery_app/models/district_model.dart';
 import 'package:grocery_app/models/state_model.dart';
 import 'package:http/http.dart' as http;
@@ -12,6 +13,7 @@ import '../models/register_response_model.dart';
 import '../models/shop_approval_model.dart';
 import '../models/shop_model.dart';
 import '../models/category_model.dart';
+import '../models/cart_item_model.dart';
 
 class ApiService {
   // ─── OTP ────────────────────────────────────────────────────
@@ -988,32 +990,34 @@ class ApiService {
     required double stock,
     required String unit,
     required double lowStockThreshold,
+    File? image,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
     final url = Uri.parse('${ApiConstants.api}api/grocery/products/view/');
-    final body = {
-      "category": categoryId,
-      "name": name,
-      "description": description,
-      "price": price,
-      "stock": stock,
-      "unit": unit,
-      "low_stock_threshold": lowStockThreshold,
-    };
 
     print("ADD PRODUCT URL: $url");
-    print("ADD PRODUCT BODY: $body");
 
-    final response = await http.post(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-      },
-      body: jsonEncode(body),
-    );
+    final request = http.MultipartRequest('POST', url);
+    request.headers['Authorization'] = 'Bearer $token';
+
+    request.fields['category'] = categoryId.toString();
+    request.fields['name'] = name;
+    request.fields['description'] = description;
+    request.fields['price'] = price;
+    request.fields['stock'] = stock.toString();
+    request.fields['unit'] = unit;
+    request.fields['low_stock_threshold'] = lowStockThreshold.toString();
+
+    if (image != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath('image', image.path),
+      );
+    }
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
 
     print("ADD PRODUCT STATUS CODE: ${response.statusCode}");
     print("ADD PRODUCT RESPONSE: ${response.body}");
@@ -1021,6 +1025,90 @@ class ApiService {
     if (response.statusCode != 200 && response.statusCode != 201) {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to add product";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<void> updateProduct({
+    required int productId,
+    required int categoryId,
+    required String name,
+    required String description,
+    required String price,
+    required double stock,
+    required String unit,
+    required double lowStockThreshold,
+    File? image,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/products/update/$productId/');
+
+    print("UPDATE PRODUCT URL: $url");
+
+    final request = http.MultipartRequest('PUT', url);
+    request.headers['Authorization'] = 'Bearer $token';
+
+    request.fields['category'] = categoryId.toString();
+    request.fields['name'] = name;
+    request.fields['description'] = description;
+    request.fields['price'] = price;
+    request.fields['stock'] = stock.toString();
+    request.fields['unit'] = unit;
+    request.fields['low_stock_threshold'] = lowStockThreshold.toString();
+
+    if (image != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath('image', image.path),
+      );
+    }
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    print("UPDATE PRODUCT STATUS CODE: ${response.statusCode}");
+    print("UPDATE PRODUCT RESPONSE: ${response.body}");
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      final decoded = jsonDecode(response.body);
+      String errorMessage = "Failed to update product";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<void> deleteProduct({required int productId}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/products/update/$productId/');
+
+    print("DELETE PRODUCT URL: $url");
+
+    final response = await http.delete(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("DELETE PRODUCT STATUS CODE: ${response.statusCode}");
+    print("DELETE PRODUCT RESPONSE: ${response.body}");
+
+    if (response.statusCode != 200 && response.statusCode != 204 && response.statusCode != 201) {
+      final decoded = jsonDecode(response.body);
+      String errorMessage = "Failed to delete product";
       if (decoded is Map<String, dynamic>) {
         errorMessage =
             decoded['detail']?.toString() ??
@@ -1030,6 +1118,7 @@ class ApiService {
       throw Exception(errorMessage);
     }
   }
+
 
   // ─── Addresses ───────────────────────────────────────────────
 
@@ -1288,134 +1377,5 @@ class ApiService {
       }
       throw Exception(errorMessage);
     }
-  }
-
-  // ─── Change Phone Number ─────────────────────────────────────
-
-  Future<Map<String, dynamic>> requestOldPhoneOtp({
-    required String oldPhone,
-    required String newPhone,
-  }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('access') ?? '';
-
-    final url = Uri.parse(
-      '${ApiConstants.api}api/grocery/change/phone/request/old/otp/',
-    );
-
-    final response = await http.post(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-      },
-      body: jsonEncode({
-        "old_phone": oldPhone,
-        "new_phone": newPhone,
-      }),
-    );
-
-    final decoded = jsonDecode(response.body);
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return decoded;
-    }
-
-    throw Exception(
-      decoded['detail'] ?? decoded['message'] ?? "Requesting old OTP failed",
-    );
-  }
-
-  Future<Map<String, dynamic>> verifyOldPhoneOtp({
-    required String oldOtp,
-  }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('access') ?? '';
-
-    final url = Uri.parse(
-      '${ApiConstants.api}api/grocery/change/phone/verify/old/otp/',
-    );
-
-    final response = await http.post(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-      },
-      body: jsonEncode({"otp": oldOtp}),
-    );
-
-    final decoded = jsonDecode(response.body);
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return decoded;
-    }
-
-    throw Exception(
-      decoded['detail'] ?? decoded['message'] ?? "Verifying old OTP failed",
-    );
-  }
-
-  Future<Map<String, dynamic>> requestNewPhoneOtp({
-    required String newPhone,
-  }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('access') ?? '';
-
-    final url = Uri.parse(
-      '${ApiConstants.api}api/grocery/change/phone/request/new/otp/',
-    );
-
-    final response = await http.post(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-      },
-      body: jsonEncode({"new_phone": newPhone}),
-    );
-
-    final decoded = jsonDecode(response.body);
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return decoded;
-    }
-
-    throw Exception(
-      decoded['detail'] ?? decoded['message'] ?? "Requesting new OTP failed",
-    );
-  }
-
-  Future<Map<String, dynamic>> verifyNewPhoneOtp({
-    required String newOtp,
-    required String newPhone,
-  }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('access') ?? '';
-
-    final url = Uri.parse(
-      '${ApiConstants.api}api/grocery/change/phone/verify/new/otp/',
-    );
-
-    final response = await http.post(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-      },
-      body: jsonEncode({"otp": newOtp}),
-    );
-
-    final decoded = jsonDecode(response.body);
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final updatedPhone = decoded['new_phone']?.toString() ?? newPhone;
-      await prefs.setString('phone', updatedPhone);
-      return decoded;
-    }
-
-    throw Exception(
-      decoded['detail'] ?? decoded['message'] ?? "Verifying new OTP failed",
-    );
   }
 }
