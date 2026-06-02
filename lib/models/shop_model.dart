@@ -19,6 +19,8 @@ class ShopModel {
   final String districtName;
   final String? latitude;
   final String? longitude;
+  final String? productImage;
+  final double? productPrice;
   final String createdAt;
 
   ShopModel({
@@ -40,6 +42,8 @@ class ShopModel {
     required this.districtName,
     this.latitude,
     this.longitude,
+    this.productImage,
+    this.productPrice,
     required this.createdAt,
   });
 
@@ -54,6 +58,18 @@ class ShopModel {
             : '${ApiConstants.api}$profilePic';
       }
     }
+    String? productImg = json['product_image']?.toString();
+    if (productImg != null && productImg.isNotEmpty) {
+      if (!productImg.startsWith('http://') && !productImg.startsWith('https://')) {
+        productImg = productImg.startsWith('/')
+            ? '${ApiConstants.api}${productImg.substring(1)}'
+            : '${ApiConstants.api}$productImg';
+      }
+    }
+    final double? productPri = json['product_price'] != null
+        ? double.tryParse(json['product_price'].toString())
+        : null;
+
     return ShopModel(
       id: json['id'] ?? 0,
       phone: json['phone']?.toString() ?? '',
@@ -73,6 +89,8 @@ class ShopModel {
       districtName: json['district_name']?.toString() ?? '',
       latitude: json['latitude']?.toString(),
       longitude: json['longitude']?.toString(),
+      productImage: productImg,
+      productPrice: productPri,
       createdAt: json['created_at']?.toString() ?? '',
     );
   }
