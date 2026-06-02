@@ -10,7 +10,9 @@ import '../../models/district_model.dart';
 import '../../services/api_service.dart';
 import '../User/user_home_page.dart';
 import '../Shop/shop_home_page.dart';
+import '../Shop/shop_status_pages.dart';
 import 'admin_home_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 
 class RegisterPage extends StatefulWidget {
@@ -36,6 +38,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController lastNameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
+  final TextEditingController shopNameController = TextEditingController();
 
   String selectedUserType = 'user';
 
@@ -76,6 +79,7 @@ class _RegisterPageState extends State<RegisterPage> {
     lastNameController.dispose();
     phoneController.dispose();
     emailController.dispose();
+    shopNameController.dispose();
     super.dispose();
   }
 
@@ -277,9 +281,14 @@ class _RegisterPageState extends State<RegisterPage> {
         profilePicturePath: selectedXFile?.path,
         latitude: selectedLatitude,
         longitude: selectedLongitude,
+        shopName: selectedUserType == 'shop' ? shopNameController.text.trim() : null,
       );
 
       await _apiService.saveRegisteredUserData(response);
+      if (selectedUserType == 'shop') {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('shop_name', shopNameController.text.trim());
+      }
 
       if (!mounted) return;
 
@@ -304,11 +313,26 @@ class _RegisterPageState extends State<RegisterPage> {
           (route) => false,
         );
       } else if (registeredUserType == 'shop') {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const ShopHomePage()),
-          (route) => false,
-        );
+        final approvalStatus = response.user.approvalStatus.toLowerCase();
+        if (approvalStatus == 'approved') {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const ShopHomePage()),
+            (route) => false,
+          );
+        } else if (approvalStatus == 'rejected') {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const ShopRejectedPage()),
+            (route) => false,
+          );
+        } else {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const ShopPendingPage()),
+            (route) => false,
+          );
+        }
       } else {
         Navigator.pushAndRemoveUntil(
           context,
@@ -831,6 +855,23 @@ class _RegisterPageState extends State<RegisterPage> {
                 }
               },
             ),
+
+            if (selectedUserType == 'shop') ...[
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: shopNameController,
+                decoration: inputDecoration(
+                  label: 'Shop Name',
+                  icon: Icons.storefront_rounded,
+                ),
+                validator: (value) {
+                  if (selectedUserType == 'shop' && (value == null || value.trim().isEmpty)) {
+                    return 'Enter shop name';
+                  }
+                  return null;
+                },
+              ),
+            ],
 
             const SizedBox(height: 24),
 

@@ -1,18 +1,16 @@
 import 'package:flutter/material.dart';
-import '../../models/category_model.dart';
 import '../../models/shop_model.dart';
 import '../../services/api_service.dart';
-import 'shop_category_products_page.dart';
+import 'shop_products_page.dart';
 
-class CategoryShopsPage extends StatefulWidget {
-  final CategoryModel category;
-  const CategoryShopsPage({super.key, required this.category});
+class AllShopsPage extends StatefulWidget {
+  const AllShopsPage({super.key});
 
   @override
-  State<CategoryShopsPage> createState() => _CategoryShopsPageState();
+  State<AllShopsPage> createState() => _AllShopsPageState();
 }
 
-class _CategoryShopsPageState extends State<CategoryShopsPage> {
+class _AllShopsPageState extends State<AllShopsPage> {
   final ApiService _apiService = ApiService();
 
   final Color primaryGreen = const Color(0xFF1B8F3A);
@@ -21,14 +19,24 @@ class _CategoryShopsPageState extends State<CategoryShopsPage> {
   final Color goldAccent = const Color(0xFFFFB300);
   final Color background = const Color(0xFFF7FFF9);
 
-  List<ShopModel> _shops = [];
+  List<ShopModel> _allShops = [];
+  List<ShopModel> _filteredShops = [];
   bool _isLoading = true;
   String? _error;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadShops();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadShops() async {
@@ -37,11 +45,10 @@ class _CategoryShopsPageState extends State<CategoryShopsPage> {
       _error = null;
     });
     try {
-      final result = await _apiService.getShopsByCategory(
-        categoryId: widget.category.id,
-      );
+      final shops = await _apiService.getShops();
       setState(() {
-        _shops = List<ShopModel>.from(result['results'] ?? []);
+        _allShops = shops;
+        _filteredShops = shops;
         _isLoading = false;
       });
     } catch (e) {
@@ -52,31 +59,53 @@ class _CategoryShopsPageState extends State<CategoryShopsPage> {
     }
   }
 
+  void _onSearchChanged() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      if (query.isEmpty) {
+        _filteredShops = _allShops;
+      } else {
+        _filteredShops = _allShops.where((shop) {
+          final nameMatch = shop.shop_name.toLowerCase().contains(query);
+          final districtMatch = shop.districtName.toLowerCase().contains(query);
+          final stateMatch = shop.stateName.toLowerCase().contains(query);
+          return nameMatch || districtMatch || stateMatch;
+        }).toList();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: background,
-      body: CustomScrollView(
-        slivers: [
-          _buildSliverAppBar(),
-          if (_isLoading)
-            const SliverFillRemaining(
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (_error != null)
-            SliverFillRemaining(child: _buildError())
-          else if (_shops.isEmpty)
-            SliverFillRemaining(child: _buildEmpty())
-          else
-            _buildShopList(),
-        ],
+      body: RefreshIndicator(
+        color: primaryGreen,
+        onRefresh: _loadShops,
+        child: CustomScrollView(
+          slivers: [
+            _buildSliverAppBar(),
+            _buildSearchBox(),
+            if (_isLoading)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_error != null)
+              SliverFillRemaining(hasScrollBody: false, child: _buildError())
+            else if (_filteredShops.isEmpty)
+              SliverFillRemaining(hasScrollBody: false, child: _buildEmpty())
+            else
+              _buildShopList(),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildSliverAppBar() {
     return SliverAppBar(
-      expandedHeight: 160,
+      expandedHeight: 140,
       pinned: true,
       backgroundColor: primaryGreen,
       foregroundColor: Colors.white,
@@ -101,59 +130,73 @@ class _CategoryShopsPageState extends State<CategoryShopsPage> {
           ),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 56, 20, 20),
+              padding: const EdgeInsets.fromLTRB(20, 50, 20, 16),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.end,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.category_rounded,
-                            color: Colors.white,
-                            size: 26,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.category.name,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${_shops.length} shop${_shops.length != 1 ? 's' : ''} available',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.8),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                  const Text(
+                    'Nearby Shops',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _isLoading
+                        ? 'Finding local shops...'
+                        : '${_allShops.length} premium stores active',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.85),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBox() {
+    return SliverToBoxAdapter(
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 18, 16, 4),
+        height: 52,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: primaryGreen.withOpacity(0.04),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+          border: Border.all(color: Colors.green.shade50),
+        ),
+        child: TextField(
+          controller: _searchController,
+          decoration: InputDecoration(
+            hintText: 'Search shops by name or district...',
+            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+            prefixIcon: Icon(Icons.search_rounded, color: primaryGreen),
+            suffixIcon: _searchController.text.isNotEmpty
+                ? IconButton(
+                    icon: Icon(
+                      Icons.clear_rounded,
+                      color: Colors.grey.shade400,
+                    ),
+                    onPressed: () => _searchController.clear(),
+                  )
+                : null,
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(vertical: 14),
           ),
         ),
       ),
@@ -219,7 +262,9 @@ class _CategoryShopsPageState extends State<CategoryShopsPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              'No shops are selling ${widget.category.name} products right now.',
+              _searchController.text.isNotEmpty
+                  ? 'No stores match your search criteria.'
+                  : 'Check back later for newly approved shops in your area!',
               style: TextStyle(color: Colors.grey.shade500),
               textAlign: TextAlign.center,
             ),
@@ -231,30 +276,24 @@ class _CategoryShopsPageState extends State<CategoryShopsPage> {
 
   Widget _buildShopList() {
     return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
-          (context, index) => _buildShopCard(_shops[index]),
-          childCount: _shops.length,
+          (context, index) => _buildShopCard(_filteredShops[index]),
+          childCount: _filteredShops.length,
         ),
       ),
     );
   }
 
   Widget _buildShopCard(ShopModel shop) {
-    final initials =
-        '${shop.firstName.isNotEmpty ? shop.firstName[0] : ''}${shop.lastName.isNotEmpty ? shop.lastName[0] : ''}'
-            .toUpperCase();
     final isApproved = shop.approvalStatus == 'approved';
 
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) =>
-                ShopCategoryProductsPage(shop: shop, category: widget.category),
-          ),
+          MaterialPageRoute(builder: (_) => ShopProductsPage(shop: shop)),
         );
       },
       child: Container(
@@ -274,7 +313,7 @@ class _CategoryShopsPageState extends State<CategoryShopsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cover Image Block with overlays
+            // Cover Image Block
             SizedBox(
               height: 140,
               width: double.infinity,
@@ -283,19 +322,24 @@ class _CategoryShopsPageState extends State<CategoryShopsPage> {
                 children: [
                   // Image
                   ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(24),
+                    ),
                     child: shop.productImage != null
                         ? Image.network(
                             shop.productImage!,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => _buildCoverPlaceholder(),
+                            errorBuilder: (context, error, stackTrace) =>
+                                _buildCoverPlaceholder(),
                           )
                         : _buildCoverPlaceholder(),
                   ),
-                  // Dark Gradient Overlay
+                  // Bottom Gradient Overlay
                   Positioned.fill(
                     child: ClipRRect(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(24),
+                      ),
                       child: Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -312,22 +356,22 @@ class _CategoryShopsPageState extends State<CategoryShopsPage> {
                     ),
                   ),
                   // Favorite Heart Icon
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.favorite_border_rounded,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                    ),
-                  ),
+                  // Positioned(
+                  //   top: 10,
+                  //   right: 10,
+                  //   child: Container(
+                  //     padding: const EdgeInsets.all(6),
+                  //     decoration: BoxDecoration(
+                  //       color: Colors.black.withOpacity(0.2),
+                  //       shape: BoxShape.circle,
+                  //     ),
+                  //     child: const Icon(
+                  //       Icons.favorite_border_rounded,
+                  //       color: Colors.white,
+                  //       size: 18,
+                  //     ),
+                  //   ),
+                  // ),
                   // Price Tag Overlay
                   if (shop.productPrice != null)
                     Positioned(
@@ -360,7 +404,7 @@ class _CategoryShopsPageState extends State<CategoryShopsPage> {
                 ],
               ),
             ),
-            // Shop Details below the Cover Image
+            // Shop details below Cover Image
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
               child: Row(
@@ -424,26 +468,23 @@ class _CategoryShopsPageState extends State<CategoryShopsPage> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isApproved
-                              ? const Color(0xFFE8F5E9)
-                              : const Color(0xFFFFF3E0),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          isApproved ? 'Open' : 'Pending',
-                          style: TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w800,
-                            color: isApproved
-                                ? primaryGreen
-                                : Colors.orange.shade700,
-                          ),
-                        ),
-                      ),
+                      // Container(
+                      //   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      //   decoration: BoxDecoration(
+                      //     color: isApproved
+                      //         ? const Color(0xFFE8F5E9)
+                      //         : const Color(0xFFFFF3E0),
+                      //     borderRadius: BorderRadius.circular(6),
+                      //   ),
+                      //   child: Text(
+                      //     isApproved ? 'Open' : 'Pending',
+                      //     style: TextStyle(
+                      //       fontSize: 9.5,
+                      //       fontWeight: FontWeight.w800,
+                      //       color: isApproved ? primaryGreen : Colors.orange.shade700,
+                      //     ),
+                      //   ),
+                      // ),
                       const SizedBox(height: 10),
                       Icon(
                         Icons.arrow_forward_ios_rounded,

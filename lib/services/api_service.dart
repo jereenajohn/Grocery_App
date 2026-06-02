@@ -88,6 +88,7 @@ class ApiService {
         await prefs.setString('first_name', user['name']?.toString() ?? '');
         await prefs.setString('email', user['email']?.toString() ?? '');
         await prefs.setString('user_type', user['user_type']?.toString() ?? '');
+        await prefs.setString('shop_name', user['shop_name']?.toString() ?? '');
         await prefs.setString(
           'approval_status',
           user['approval_status']?.toString() ?? '',
@@ -121,6 +122,7 @@ class ApiService {
     String? profilePicturePath,
     double? latitude,
     double? longitude,
+    String? shopName,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
@@ -137,6 +139,10 @@ class ApiService {
     request.fields['country'] = country.toString();
     request.fields['state'] = state.toString();
     request.fields['district'] = district.toString();
+
+    if (shopName != null && shopName.isNotEmpty) {
+      request.fields['shop_name'] = shopName;
+    }
 
     if (latitude != null) request.fields['latitude'] = latitude.toString();
     if (longitude != null) request.fields['longitude'] = longitude.toString();
@@ -216,6 +222,72 @@ class ApiService {
       'state': prefs.getInt('state') ?? 0,
       'district': prefs.getInt('district') ?? 0,
     };
+  }
+
+  Future<Map<String, dynamic>> getProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    // 1. Try hitting the standard profile view endpoint
+    final url = Uri.parse('${ApiConstants.api}api/grocery/profile/');
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      ).timeout(const Duration(seconds: 3));
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          final status = decoded['approval_status']?.toString() ?? 'pending';
+          await prefs.setString('approval_status', status);
+          return decoded;
+        }
+      }
+    } catch (_) {}
+
+    // 2. Fallback: Search the approvals list for matching phone
+    try {
+      final approvalsData = await getShopApprovals(page: 1);
+      final List results = approvalsData['results'] ?? [];
+      final myPhone = prefs.getString('phone') ?? '';
+
+      for (var item in results) {
+        if (item is ShopApprovalModel && item.phone == myPhone) {
+          final status = item.approvalStatus;
+          await prefs.setString('approval_status', status);
+          return {
+            'approval_status': status,
+            'user': {
+              'id': item.id,
+              'phone': item.phone,
+              'name': item.firstName,
+              'email': item.email,
+              'user_type': 'shop',
+              'approval_status': status,
+            }
+          };
+        }
+      }
+    } catch (_) {}
+
+    // 3. Fallback: Check getShops approved store list
+    try {
+      final shops = await getShops();
+      final myPhone = prefs.getString('phone') ?? '';
+      final isApproved = shops.any((s) => s.phone == myPhone);
+      if (isApproved) {
+        await prefs.setString('approval_status', 'approved');
+        return {'approval_status': 'approved'};
+      }
+    } catch (_) {}
+
+    // 4. Default: Return saved local profile status
+    final savedStatus = prefs.getString('approval_status') ?? 'pending';
+    return {'approval_status': savedStatus};
   }
 
   Future<void> clearSavedUserData() async {
@@ -951,7 +1023,7 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
-    final url = Uri.parse('${ApiConstants.api}api/grocery/products/view/');
+    final url = Uri.parse('${ApiConstants.api}api/grocery/my/products/view/');
     print("GET PRODUCTS URL: $url");
 
     final response = await http.get(
@@ -1010,7 +1082,7 @@ class ApiService {
     request.fields['price'] = price;
     request.fields['stock'] = stock.toString();
     request.fields['unit'] = unit;
-    request.fields['low_stock_threshold'] = lowStockThreshold.toString();
+    request.fields['low_stock_threshold'] = lowStockThreshold.toStringAsFixed(2);
 
     if (image != null) {
       request.files.add(await http.MultipartFile.fromPath('image', image.path));
@@ -1021,7 +1093,6 @@ class ApiService {
 
     print("ADD PRODUCT STATUS CODE: ${response.statusCode}");
     print("ADD PRODUCT RESPONSE: ${response.body}");
-
     if (response.statusCode != 200 && response.statusCode != 201) {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to add product";
@@ -1064,7 +1135,7 @@ class ApiService {
     request.fields['price'] = price;
     request.fields['stock'] = stock.toString();
     request.fields['unit'] = unit;
-    request.fields['low_stock_threshold'] = lowStockThreshold.toString();
+    request.fields['low_stock_threshold'] = lowStockThreshold.toStringAsFixed(2);
 
     if (image != null) {
       request.files.add(await http.MultipartFile.fromPath('image', image.path));

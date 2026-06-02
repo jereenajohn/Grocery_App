@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/address_model.dart';
 import '../models/country_model.dart';
 import '../models/state_model.dart';
@@ -23,11 +24,22 @@ class _AddressPageState extends State<AddressPage> {
   List<AddressModel> _addresses = [];
   bool _isLoading = true;
   String? _error;
+  int? _selectedAddressId;
 
   @override
   void initState() {
     super.initState();
     _loadAddresses();
+    _loadSelectedAddressId();
+  }
+
+  Future<void> _loadSelectedAddressId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      setState(() {
+        _selectedAddressId = prefs.getInt('selected_address_id');
+      });
+    } catch (_) {}
   }
 
   Future<void> _loadAddresses() async {
@@ -99,6 +111,31 @@ class _AddressPageState extends State<AddressPage> {
         ),
       );
     }
+  }
+
+  Future<void> _selectAddress(AddressModel addr) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('selected_address_id', addr.id);
+      setState(() {
+        _selectedAddressId = addr.id;
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Primary address updated to ${addr.city}'),
+          backgroundColor: primaryGreen,
+          duration: const Duration(milliseconds: 1200),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      Future.delayed(const Duration(milliseconds: 600), () {
+        if (mounted) {
+          Navigator.pop(context, addr);
+        }
+      });
+    } catch (_) {}
   }
 
   void _openAddressForm({AddressModel? existing}) async {
@@ -231,55 +268,98 @@ class _AddressPageState extends State<AddressPage> {
   }
 
   Widget _buildAddressCard(AddressModel addr, int index) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.green.shade50),
-        boxShadow: [
-          BoxShadow(
-            color: primaryGreen.withOpacity(0.05),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
+    final bool isSelected = _selectedAddressId != null
+        ? _selectedAddressId == addr.id
+        : index == 0;
+
+    return GestureDetector(
+      onTap: () => _selectAddress(addr),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: isSelected ? primaryGreen : Colors.green.shade50,
+            width: isSelected ? 2 : 1,
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
-        child: Column(
-          children: [
-            // Header bar
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [primaryGreen.withOpacity(0.08), lightGreen],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(7),
-                    decoration: BoxDecoration(
-                      color: primaryGreen,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.location_on_rounded, color: Colors.white, size: 16),
+          boxShadow: [
+            BoxShadow(
+              color: primaryGreen.withOpacity(isSelected ? 0.08 : 0.05),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(22),
+          child: Column(
+            children: [
+              // Header bar
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      isSelected
+                          ? primaryGreen.withOpacity(0.12)
+                          : primaryGreen.withOpacity(0.08),
+                      lightGreen,
+                    ],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Address ${index + 1}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 14,
-                        color: darkGreen,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: primaryGreen,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.location_on_rounded, color: Colors.white, size: 16),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Text(
+                            'Address ${index + 1}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 14,
+                              color: darkGreen,
+                            ),
+                          ),
+                          if (isSelected) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: primaryGreen,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.check_rounded, color: Colors.white, size: 10),
+                                  SizedBox(width: 3),
+                                  Text(
+                                    'Primary',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                  ),
                   // Edit
                   InkWell(
                     onTap: () => _openAddressForm(existing: addr),
@@ -337,7 +417,8 @@ class _AddressPageState extends State<AddressPage> {
                 ],
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );
