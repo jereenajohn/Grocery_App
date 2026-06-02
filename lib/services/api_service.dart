@@ -1379,11 +1379,17 @@ class ApiService {
 
   // ─── Shops ───────────────────────────────────────────────────
 
-  Future<List<ShopModel>> getShops() async {
+  Future<List<ShopModel>> getShops({String? search}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
-    final url = Uri.parse('${ApiConstants.api}api/grocery/shops/view/');
+    final queryParams = <String, String>{};
+    if (search != null && search.isNotEmpty) {
+      queryParams['search'] = search;
+    }
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/shops/view/')
+        .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
     print("GET SHOPS URL: $url");
 
     final response = await http.get(

@@ -13,13 +13,13 @@ import 'shop_products_page.dart';
 import 'cart_page.dart';
 import 'all_shops_page.dart';
 
-
 class UserHomePage extends StatefulWidget {
   const UserHomePage({super.key});
 
   @override
   State<UserHomePage> createState() => _UserHomePageState();
 }
+
 class _UserHomePageState extends State<UserHomePage> {
   final ApiService _apiService = ApiService();
   final ScrollController _scrollController = ScrollController();
@@ -37,6 +37,7 @@ class _UserHomePageState extends State<UserHomePage> {
 
   final PageController _promoPageController = PageController();
   Timer? _promoTimer;
+  Timer? _searchDebounceTimer;
   int _currentPromoPage = 0;
 
   final Color primaryGreen = const Color(0xFF1B8F3A);
@@ -59,10 +60,12 @@ class _UserHomePageState extends State<UserHomePage> {
   @override
   void dispose() {
     _promoTimer?.cancel();
+    _searchDebounceTimer?.cancel();
     _promoPageController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
+
   void _startPromoAutoScroll() {
     _promoTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!mounted) return;
@@ -126,10 +129,10 @@ class _UserHomePageState extends State<UserHomePage> {
     }
   }
 
-  Future<void> _loadShops() async {
+  Future<void> _loadShops({String? search}) async {
     setState(() => _shopsLoading = true);
     try {
-      final shops = await _apiService.getShops();
+      final shops = await _apiService.getShops(search: search);
       setState(() {
         _shops = shops;
         _shopsLoading = false;
@@ -159,7 +162,7 @@ class _UserHomePageState extends State<UserHomePage> {
     final lower = name.toLowerCase();
     final Map<String, Map<String, dynamic>> mapping = {
       'fruit': {
-        'icon': Icons.apple_rounded,
+        'icon': Icons.apple,
         'color': const Color(0xFFFFEBEE),
         'iconColor': const Color(0xFFEF5350),
       },
@@ -553,6 +556,15 @@ class _UserHomePageState extends State<UserHomePage> {
                 border: Border.all(color: Colors.green.shade50),
               ),
               child: TextField(
+                onChanged: (value) {
+                  _searchDebounceTimer?.cancel();
+                  _searchDebounceTimer = Timer(
+                    const Duration(milliseconds: 500),
+                    () {
+                      _loadShops(search: value.trim());
+                    },
+                  );
+                },
                 decoration: InputDecoration(
                   hintText: 'Search fresh foods, veggies...',
                   hintStyle: TextStyle(
@@ -751,165 +763,141 @@ class _UserHomePageState extends State<UserHomePage> {
     );
   }
 
-Widget _buildPromoBanner() {
-  if (_bannersLoading) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(18, 18, 18, 0),
-      height: 148,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Center(
-        child: CircularProgressIndicator(color: primaryGreen),
-      ),
-    );
-  }
-
-  if (_banners.isEmpty) {
-    return const SizedBox.shrink();
-  }
-
-  return Column(
-    children: [
-      Container(
+  Widget _buildPromoBanner() {
+    if (_bannersLoading) {
+      return Container(
         margin: const EdgeInsets.fromLTRB(18, 18, 18, 0),
         height: 148,
-        child: ClipRRect(
+        decoration: BoxDecoration(
+          color: Colors.grey.shade200,
           borderRadius: BorderRadius.circular(24),
-          child: PageView.builder(
-            controller: _promoPageController,
-            itemCount: _banners.length,
-            onPageChanged: (index) {
-              setState(() => _currentPromoPage = index);
-            },
-            itemBuilder: (context, index) {
-              final banner = _banners[index];
+        ),
+        child: Center(child: CircularProgressIndicator(color: primaryGreen)),
+      );
+    }
 
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.network(
-                    banner.image,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) {
-                      return Container(
-                        color: lightGreen,
-                        child: Icon(
-                          Icons.image_not_supported_rounded,
-                          color: primaryGreen,
-                          size: 45,
+    if (_banners.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      children: [
+        Container(
+          margin: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+          height: 148,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: PageView.builder(
+              controller: _promoPageController,
+              itemCount: _banners.length,
+              onPageChanged: (index) {
+                setState(() => _currentPromoPage = index);
+              },
+              itemBuilder: (context, index) {
+                final banner = _banners[index];
+
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.network(
+                      banner.image,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) {
+                        return Container(
+                          color: lightGreen,
+                          child: Icon(
+                            Icons.image_not_supported_rounded,
+                            color: primaryGreen,
+                            size: 45,
+                          ),
+                        );
+                      },
+                    ),
+
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.black.withOpacity(0.50),
+                            Colors.black.withOpacity(0.10),
+                          ],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
                         ),
-                      );
-                    },
-                  ),
-
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.black.withOpacity(0.50),
-                          Colors.black.withOpacity(0.10),
-                        ],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
                       ),
                     ),
-                  ),
 
-                  Positioned(
-                    right: -20,
-                    bottom: -20,
-                    child: Icon(
-                      Icons.shopping_basket_rounded,
-                      size: 160,
-                      color: Colors.white.withOpacity(0.10),
+                    Positioned(
+                      right: -20,
+                      bottom: -20,
+                      child: Icon(
+                        Icons.shopping_basket_rounded,
+                        size: 160,
+                        color: Colors.white.withOpacity(0.10),
+                      ),
                     ),
-                  ),
 
-                  Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.24),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Text(
-                            "OFFER",
-                            style: TextStyle(
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            banner.title,
+                            style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 10,
+                              fontSize: 20,
                               fontWeight: FontWeight.w900,
-                              letterSpacing: 1,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
 
-                        const SizedBox(height: 8),
+                          const SizedBox(height: 4),
 
-                        Text(
-                          banner.title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
+                          Text(
+                            banner.description,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-
-                        const SizedBox(height: 4),
-
-                        Text(
-                          banner.description,
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              );
-            },
+                  ],
+                );
+              },
+            ),
           ),
         ),
-      ),
 
-      const SizedBox(height: 10),
+        const SizedBox(height: 10),
 
-      Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(_banners.length, (index) {
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            height: 8,
-            width: _currentPromoPage == index ? 24 : 8,
-            decoration: BoxDecoration(
-              color: _currentPromoPage == index
-                  ? primaryGreen
-                  : Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          );
-        }),
-      ),
-    ],
-  );
-}
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(_banners.length, (index) {
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              height: 8,
+              width: _currentPromoPage == index ? 24 : 8,
+              decoration: BoxDecoration(
+                color: _currentPromoPage == index
+                    ? primaryGreen
+                    : Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            );
+          }),
+        ),
+      ],
+    );
+  }
 
   Widget _buildShops() {
     return Column(
@@ -1010,8 +998,6 @@ Widget _buildPromoBanner() {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(16),
                             color: lightGreen,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: primaryGreen, width: 1.5),
                           ),
                           child: Stack(
                             fit: StackFit.expand,
@@ -1327,7 +1313,11 @@ Widget _buildPromoBanner() {
                       color: lightGreen,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.settings_rounded, color: primaryGreen, size: 24),
+                    child: Icon(
+                      Icons.settings_rounded,
+                      color: primaryGreen,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Text(
@@ -1354,8 +1344,11 @@ Widget _buildPromoBanner() {
                       radius: 28,
                       backgroundColor: lightGreen,
                       child: Text(
-                        _userData['first_name'] != null && _userData['first_name'].toString().isNotEmpty
-                            ? _userData['first_name'].toString()[0].toUpperCase()
+                        _userData['first_name'] != null &&
+                                _userData['first_name'].toString().isNotEmpty
+                            ? _userData['first_name']
+                                  .toString()[0]
+                                  .toUpperCase()
                             : 'U',
                         style: TextStyle(
                           color: primaryGreen,
@@ -1370,7 +1363,8 @@ Widget _buildPromoBanner() {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${_userData['first_name'] ?? ''} ${_userData['last_name'] ?? ''}'.trim(),
+                            '${_userData['first_name'] ?? ''} ${_userData['last_name'] ?? ''}'
+                                .trim(),
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w900,
@@ -1455,11 +1449,7 @@ Widget _buildPromoBanner() {
                 color: (iconColor ?? primaryGreen).withOpacity(0.08),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                icon,
-                color: iconColor ?? primaryGreen,
-                size: 20,
-              ),
+              child: Icon(icon, color: iconColor ?? primaryGreen, size: 20),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -1533,4 +1523,3 @@ Widget _buildPromoBanner() {
     );
   }
 }
-

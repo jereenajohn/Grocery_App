@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/category_model.dart';
 import '../../models/shop_model.dart';
+import '../../models/product_model.dart';
 import '../../services/api_service.dart';
 import 'shop_category_products_page.dart';
 
@@ -37,11 +38,37 @@ class _CategoryShopsPageState extends State<CategoryShopsPage> {
       _error = null;
     });
     try {
-      final result = await _apiService.getShopsByCategory(
-        categoryId: widget.category.id,
-      );
+      // 1. Fetch all approved shops
+      final allShops = await _apiService.getShops();
+
+      // 2. Concurrently query prioritize category products for each shop
+      final List<ShopModel> filteredShops = [];
+      final futures = allShops.map((shop) async {
+        try {
+          final result = await _apiService.getProductsByShopPrioritizeCategory(
+            shopId: shop.id,
+            categoryId: widget.category.id,
+          );
+          final List<ProductModel> products = List<ProductModel>.from(result['results'] ?? []);
+          final hasCategoryProduct = products.any((p) => p.category == widget.category.id);
+          if (hasCategoryProduct) {
+            return shop;
+          }
+        } catch (e) {
+          debugPrint("Error checking products for shop ${shop.id}: $e");
+        }
+        return null;
+      }).toList();
+
+      final resolvedShops = await Future.wait(futures);
+      for (var shop in resolvedShops) {
+        if (shop != null) {
+          filteredShops.add(shop);
+        }
+      }
+
       setState(() {
-        _shops = List<ShopModel>.from(result['results'] ?? []);
+        _shops = filteredShops;
         _isLoading = false;
       });
     } catch (e) {
