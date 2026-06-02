@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:grocery_app/models/banner_model.dart';
 import '../../models/address_model.dart';
 import '../../models/category_model.dart';
 import '../../models/shop_model.dart';
@@ -28,6 +29,9 @@ class _UserHomePageState extends State<UserHomePage> {
   List<CategoryModel> _categories = [];
   bool _categoriesLoading = true;
 
+  List<BannerModel> _banners = [];
+  bool _bannersLoading = true;
+
   final PageController _promoPageController = PageController();
   Timer? _promoTimer;
   int _currentPromoPage = 0;
@@ -46,6 +50,7 @@ class _UserHomePageState extends State<UserHomePage> {
     _loadShops();
     _loadCategories();
     _startPromoAutoScroll();
+    _loadBanners();
   }
 
   @override
@@ -58,7 +63,8 @@ class _UserHomePageState extends State<UserHomePage> {
   void _startPromoAutoScroll() {
     _promoTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!mounted) return;
-      final nextPage = (_currentPromoPage + 1) % 2;
+      if (_banners.isEmpty) return;
+      final nextPage = (_currentPromoPage + 1) % _banners.length;
       _promoPageController.animateToPage(
         nextPage,
         duration: const Duration(milliseconds: 600),
@@ -90,6 +96,21 @@ class _UserHomePageState extends State<UserHomePage> {
     } catch (_) {}
   }
 
+  Future<void> _loadBanners() async {
+    setState(() => _bannersLoading = true);
+
+    try {
+      final banners = await _apiService.getBanners();
+
+      setState(() {
+        _banners = banners;
+        _bannersLoading = false;
+      });
+    } catch (e) {
+      setState(() => _bannersLoading = false);
+    }
+  }
+
   Future<void> _loadShops() async {
     setState(() => _shopsLoading = true);
     try {
@@ -107,7 +128,9 @@ class _UserHomePageState extends State<UserHomePage> {
     setState(() => _categoriesLoading = true);
     try {
       final result = await _apiService.getCategories();
-      final List<CategoryModel> cats = List<CategoryModel>.from(result['results'] ?? []);
+      final List<CategoryModel> cats = List<CategoryModel>.from(
+        result['results'] ?? [],
+      );
       setState(() {
         _categories = cats;
         _categoriesLoading = false;
@@ -120,31 +143,131 @@ class _UserHomePageState extends State<UserHomePage> {
   Map<String, dynamic> _getCategoryVisuals(String name) {
     final lower = name.toLowerCase();
     final Map<String, Map<String, dynamic>> mapping = {
-      'fruit': {'icon': Icons.apple_rounded, 'color': const Color(0xFFFFEBEE), 'iconColor': const Color(0xFFEF5350)},
-      'vegetable': {'icon': Icons.eco_rounded, 'color': const Color(0xFFE8F5E9), 'iconColor': const Color(0xFF4CAF50)},
-      'veggie': {'icon': Icons.eco_rounded, 'color': const Color(0xFFE8F5E9), 'iconColor': const Color(0xFF4CAF50)},
-      'dairy': {'icon': Icons.egg_alt_rounded, 'color': const Color(0xFFFFF8E1), 'iconColor': const Color(0xFFFFB300)},
-      'milk': {'icon': Icons.egg_alt_rounded, 'color': const Color(0xFFFFF8E1), 'iconColor': const Color(0xFFFFB300)},
-      'bakery': {'icon': Icons.cookie_rounded, 'color': const Color(0xFFEFEBE9), 'iconColor': const Color(0xFF8D6E63)},
-      'bread': {'icon': Icons.cookie_rounded, 'color': const Color(0xFFEFEBE9), 'iconColor': const Color(0xFF8D6E63)},
-      'meat': {'icon': Icons.restaurant_rounded, 'color': const Color(0xFFFBE9E7), 'iconColor': const Color(0xFFFF5722)},
-      'chicken': {'icon': Icons.restaurant_rounded, 'color': const Color(0xFFFBE9E7), 'iconColor': const Color(0xFFFF5722)},
-      'fish': {'icon': Icons.set_meal_rounded, 'color': const Color(0xFFE0F2F1), 'iconColor': const Color(0xFF00897B)},
-      'seafood': {'icon': Icons.set_meal_rounded, 'color': const Color(0xFFE0F2F1), 'iconColor': const Color(0xFF00897B)},
-      'drink': {'icon': Icons.local_drink_rounded, 'color': const Color(0xFFE0F7FA), 'iconColor': const Color(0xFF00BCD4)},
-      'beverage': {'icon': Icons.local_drink_rounded, 'color': const Color(0xFFE0F7FA), 'iconColor': const Color(0xFF00BCD4)},
-      'juice': {'icon': Icons.local_drink_rounded, 'color': const Color(0xFFE0F7FA), 'iconColor': const Color(0xFF00BCD4)},
-      'snack': {'icon': Icons.fastfood_rounded, 'color': const Color(0xFFFFF3E0), 'iconColor': const Color(0xFFFF9800)},
-      'frozen': {'icon': Icons.ac_unit_rounded, 'color': const Color(0xFFE3F2FD), 'iconColor': const Color(0xFF2196F3)},
-      'spice': {'icon': Icons.grass_rounded, 'color': const Color(0xFFFFF8E1), 'iconColor': const Color(0xFFFF8F00)},
-      'grain': {'icon': Icons.grain_rounded, 'color': const Color(0xFFF3E5F5), 'iconColor': const Color(0xFF9C27B0)},
-      'rice': {'icon': Icons.grain_rounded, 'color': const Color(0xFFF3E5F5), 'iconColor': const Color(0xFF9C27B0)},
-      'cereal': {'icon': Icons.grain_rounded, 'color': const Color(0xFFF3E5F5), 'iconColor': const Color(0xFF9C27B0)},
-      'organic': {'icon': Icons.spa_rounded, 'color': const Color(0xFFE8F5E9), 'iconColor': const Color(0xFF388E3C)},
-      'cleaning': {'icon': Icons.cleaning_services_rounded, 'color': const Color(0xFFE8EAF6), 'iconColor': const Color(0xFF3F51B5)},
-      'personal': {'icon': Icons.person_rounded, 'color': const Color(0xFFFCE4EC), 'iconColor': const Color(0xFFE91E63)},
-      'baby': {'icon': Icons.child_care_rounded, 'color': const Color(0xFFF3E5F5), 'iconColor': const Color(0xFFAB47BC)},
-      'pet': {'icon': Icons.pets_rounded, 'color': const Color(0xFFE8F5E9), 'iconColor': const Color(0xFF66BB6A)},
+      'fruit': {
+        'icon': Icons.apple_rounded,
+        'color': const Color(0xFFFFEBEE),
+        'iconColor': const Color(0xFFEF5350),
+      },
+      'vegetable': {
+        'icon': Icons.eco_rounded,
+        'color': const Color(0xFFE8F5E9),
+        'iconColor': const Color(0xFF4CAF50),
+      },
+      'veggie': {
+        'icon': Icons.eco_rounded,
+        'color': const Color(0xFFE8F5E9),
+        'iconColor': const Color(0xFF4CAF50),
+      },
+      'dairy': {
+        'icon': Icons.egg_alt_rounded,
+        'color': const Color(0xFFFFF8E1),
+        'iconColor': const Color(0xFFFFB300),
+      },
+      'milk': {
+        'icon': Icons.egg_alt_rounded,
+        'color': const Color(0xFFFFF8E1),
+        'iconColor': const Color(0xFFFFB300),
+      },
+      'bakery': {
+        'icon': Icons.cookie_rounded,
+        'color': const Color(0xFFEFEBE9),
+        'iconColor': const Color(0xFF8D6E63),
+      },
+      'bread': {
+        'icon': Icons.cookie_rounded,
+        'color': const Color(0xFFEFEBE9),
+        'iconColor': const Color(0xFF8D6E63),
+      },
+      'meat': {
+        'icon': Icons.restaurant_rounded,
+        'color': const Color(0xFFFBE9E7),
+        'iconColor': const Color(0xFFFF5722),
+      },
+      'chicken': {
+        'icon': Icons.restaurant_rounded,
+        'color': const Color(0xFFFBE9E7),
+        'iconColor': const Color(0xFFFF5722),
+      },
+      'fish': {
+        'icon': Icons.set_meal_rounded,
+        'color': const Color(0xFFE0F2F1),
+        'iconColor': const Color(0xFF00897B),
+      },
+      'seafood': {
+        'icon': Icons.set_meal_rounded,
+        'color': const Color(0xFFE0F2F1),
+        'iconColor': const Color(0xFF00897B),
+      },
+      'drink': {
+        'icon': Icons.local_drink_rounded,
+        'color': const Color(0xFFE0F7FA),
+        'iconColor': const Color(0xFF00BCD4),
+      },
+      'beverage': {
+        'icon': Icons.local_drink_rounded,
+        'color': const Color(0xFFE0F7FA),
+        'iconColor': const Color(0xFF00BCD4),
+      },
+      'juice': {
+        'icon': Icons.local_drink_rounded,
+        'color': const Color(0xFFE0F7FA),
+        'iconColor': const Color(0xFF00BCD4),
+      },
+      'snack': {
+        'icon': Icons.fastfood_rounded,
+        'color': const Color(0xFFFFF3E0),
+        'iconColor': const Color(0xFFFF9800),
+      },
+      'frozen': {
+        'icon': Icons.ac_unit_rounded,
+        'color': const Color(0xFFE3F2FD),
+        'iconColor': const Color(0xFF2196F3),
+      },
+      'spice': {
+        'icon': Icons.grass_rounded,
+        'color': const Color(0xFFFFF8E1),
+        'iconColor': const Color(0xFFFF8F00),
+      },
+      'grain': {
+        'icon': Icons.grain_rounded,
+        'color': const Color(0xFFF3E5F5),
+        'iconColor': const Color(0xFF9C27B0),
+      },
+      'rice': {
+        'icon': Icons.grain_rounded,
+        'color': const Color(0xFFF3E5F5),
+        'iconColor': const Color(0xFF9C27B0),
+      },
+      'cereal': {
+        'icon': Icons.grain_rounded,
+        'color': const Color(0xFFF3E5F5),
+        'iconColor': const Color(0xFF9C27B0),
+      },
+      'organic': {
+        'icon': Icons.spa_rounded,
+        'color': const Color(0xFFE8F5E9),
+        'iconColor': const Color(0xFF388E3C),
+      },
+      'cleaning': {
+        'icon': Icons.cleaning_services_rounded,
+        'color': const Color(0xFFE8EAF6),
+        'iconColor': const Color(0xFF3F51B5),
+      },
+      'personal': {
+        'icon': Icons.person_rounded,
+        'color': const Color(0xFFFCE4EC),
+        'iconColor': const Color(0xFFE91E63),
+      },
+      'baby': {
+        'icon': Icons.child_care_rounded,
+        'color': const Color(0xFFF3E5F5),
+        'iconColor': const Color(0xFFAB47BC),
+      },
+      'pet': {
+        'icon': Icons.pets_rounded,
+        'color': const Color(0xFFE8F5E9),
+        'iconColor': const Color(0xFF66BB6A),
+      },
     };
 
     for (final key in mapping.keys) {
@@ -152,7 +275,11 @@ class _UserHomePageState extends State<UserHomePage> {
     }
 
     // Default visuals for unknown categories
-    return {'icon': Icons.category_rounded, 'color': const Color(0xFFF5F5F5), 'iconColor': const Color(0xFF78909C)};
+    return {
+      'icon': Icons.category_rounded,
+      'color': const Color(0xFFF5F5F5),
+      'iconColor': const Color(0xFF78909C),
+    };
   }
 
   String _getGreeting() {
@@ -171,21 +298,35 @@ class _UserHomePageState extends State<UserHomePage> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Logout',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: const Text('Are you sure you want to log out?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel', style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Logout',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -256,7 +397,11 @@ class _UserHomePageState extends State<UserHomePage> {
                           ? NetworkImage(profilePicture)
                           : null,
                       child: profilePicture.isEmpty
-                          ? const Icon(Icons.person_rounded, color: Colors.white, size: 28)
+                          ? const Icon(
+                              Icons.person_rounded,
+                              color: Colors.white,
+                              size: 28,
+                            )
                           : null,
                     ),
                   ),
@@ -323,7 +468,11 @@ class _UserHomePageState extends State<UserHomePage> {
               borderRadius: BorderRadius.circular(18),
               child: Row(
                 children: [
-                  const Icon(Icons.location_on_rounded, color: Colors.redAccent, size: 18),
+                  const Icon(
+                    Icons.location_on_rounded,
+                    color: Colors.redAccent,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -376,7 +525,10 @@ class _UserHomePageState extends State<UserHomePage> {
               child: TextField(
                 decoration: InputDecoration(
                   hintText: 'Search fresh foods, veggies...',
-                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                  hintStyle: TextStyle(
+                    color: Colors.grey.shade400,
+                    fontSize: 14,
+                  ),
                   prefixIcon: Icon(Icons.search_rounded, color: primaryGreen),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(vertical: 14),
@@ -489,8 +641,11 @@ class _UserHomePageState extends State<UserHomePage> {
             ),
             child: Row(
               children: [
-                Icon(Icons.category_outlined,
-                    color: Colors.grey.shade400, size: 32),
+                Icon(
+                  Icons.category_outlined,
+                  color: Colors.grey.shade400,
+                  size: 32,
+                ),
                 const SizedBox(width: 14),
                 Text(
                   'No categories available',
@@ -522,177 +677,209 @@ class _UserHomePageState extends State<UserHomePage> {
                     );
                   },
                   child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 6),
-                  child: Column(
-                    children: [
-                      Container(
-                        height: 64,
-                        width: 64,
-                        decoration: BoxDecoration(
-                          color: visuals['color'],
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: (visuals['iconColor'] as Color).withOpacity(0.06),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Icon(visuals['icon'], color: visuals['iconColor'], size: 28),
-                      ),
-                      const SizedBox(height: 7),
-                      Text(
-                        cat.name,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey.shade800,
-                        ),
-                      ),
-                    ],
-                  ),
-                  ),
-                );
-              },
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildPromoBanner() {
-    final List<Map<String, dynamic>> promos = [
-      {
-        'image': 'assets/image_assets/fruits.jpg',
-        'tag': 'FRUITS',
-        'title': 'Farm Fresh Fruits',
-        'subtitle': 'Seasonal Fruits at Best Prices',
-        'gradientColors': [const Color(0x66FFB300), const Color(0x66FF9100)],
-      },
-      {
-        'image': 'assets/image_assets/vegetables.jpg',
-        'tag': 'VEGETABLES',
-        'title': 'Premium Fresh Vegetables',
-        'subtitle': 'Seasonal Vegetables at Best Prices',
-        'gradientColors': [const Color(0x661B8F3A), const Color(0x660F5F28)],
-      },
-    ];
-
-    return Column(
-      children: [
-        Container(
-          margin: const EdgeInsets.fromLTRB(18, 18, 18, 0),
-          height: 148,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: PageView.builder(
-              controller: _promoPageController,
-              itemCount: promos.length,
-              onPageChanged: (index) {
-                setState(() => _currentPromoPage = index);
-              },
-              itemBuilder: (context, index) {
-                final promo = promos[index];
-                return Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.asset(
-                      promo['image'],
-                      fit: BoxFit.cover,
-                    ),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: promo['gradientColors'],
-                          
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      right: -20,
-                      bottom: -20,
-                      child: Icon(
-                        Icons.shopping_basket_rounded,
-                        size: 160,
-                        color: Colors.white.withOpacity(0.10),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.24),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              promo['tag'],
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1,
+                    margin: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Column(
+                      children: [
+                        Container(
+                          height: 64,
+                          width: 64,
+                          decoration: BoxDecoration(
+                            color: visuals['color'],
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: (visuals['iconColor'] as Color)
+                                    .withOpacity(0.06),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
                               ),
-                            ),
+                            ],
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            promo['title'],
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                            ),
+                          child: Icon(
+                            visuals['icon'],
+                            color: visuals['iconColor'],
+                            size: 28,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            promo['subtitle'],
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
+                        ),
+                        const SizedBox(height: 7),
+                        Text(
+                          cat.name,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade800,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 );
               },
             ),
           ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(promos.length, (index) {
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              height: 8,
-              width: _currentPromoPage == index ? 24 : 8,
-              decoration: BoxDecoration(
-                color: _currentPromoPage == index
-                    ? primaryGreen
-                    : Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            );
-          }),
-        ),
       ],
     );
   }
 
+Widget _buildPromoBanner() {
+  if (_bannersLoading) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+      height: 148,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Center(
+        child: CircularProgressIndicator(color: primaryGreen),
+      ),
+    );
+  }
 
+  if (_banners.isEmpty) {
+    return const SizedBox.shrink();
+  }
+
+  return Column(
+    children: [
+      Container(
+        margin: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+        height: 148,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: PageView.builder(
+            controller: _promoPageController,
+            itemCount: _banners.length,
+            onPageChanged: (index) {
+              setState(() => _currentPromoPage = index);
+            },
+            itemBuilder: (context, index) {
+              final banner = _banners[index];
+
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.network(
+                    banner.image,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) {
+                      return Container(
+                        color: lightGreen,
+                        child: Icon(
+                          Icons.image_not_supported_rounded,
+                          color: primaryGreen,
+                          size: 45,
+                        ),
+                      );
+                    },
+                  ),
+
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.black.withOpacity(0.50),
+                          Colors.black.withOpacity(0.10),
+                        ],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                    ),
+                  ),
+
+                  Positioned(
+                    right: -20,
+                    bottom: -20,
+                    child: Icon(
+                      Icons.shopping_basket_rounded,
+                      size: 160,
+                      color: Colors.white.withOpacity(0.10),
+                    ),
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.24),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text(
+                            "OFFER",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        Text(
+                          banner.title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+
+                        const SizedBox(height: 4),
+
+                        Text(
+                          banner.description,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+
+      const SizedBox(height: 10),
+
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(_banners.length, (index) {
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            height: 8,
+            width: _currentPromoPage == index ? 24 : 8,
+            decoration: BoxDecoration(
+              color: _currentPromoPage == index
+                  ? primaryGreen
+                  : Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          );
+        }),
+      ),
+    ],
+  );
+}
 
   Widget _buildShops() {
     return Column(
@@ -745,8 +932,11 @@ class _UserHomePageState extends State<UserHomePage> {
             ),
             child: Row(
               children: [
-                Icon(Icons.storefront_outlined,
-                    color: Colors.grey.shade400, size: 32),
+                Icon(
+                  Icons.storefront_outlined,
+                  color: Colors.grey.shade400,
+                  size: 32,
+                ),
                 const SizedBox(width: 14),
                 Text(
                   'No shops available nearby',
@@ -806,8 +996,7 @@ class _UserHomePageState extends State<UserHomePage> {
                           decoration: BoxDecoration(
                             color: lightGreen,
                             shape: BoxShape.circle,
-                            border:
-                                Border.all(color: primaryGreen, width: 1.5),
+                            border: Border.all(color: primaryGreen, width: 1.5),
                           ),
                           child: shop.profilePicture != null
                               ? ClipOval(
@@ -865,7 +1054,9 @@ class _UserHomePageState extends State<UserHomePage> {
                         const SizedBox(height: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: isApproved
                                 ? const Color(0xFFE8F5E9)
@@ -965,7 +1156,10 @@ class _UserHomePageState extends State<UserHomePage> {
               borderRadius: BorderRadius.circular(20),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: active ? lightGreen : Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
@@ -1004,9 +1198,7 @@ class _UserHomePageState extends State<UserHomePage> {
     if (_isLoading) {
       return Scaffold(
         backgroundColor: background,
-        body: Center(
-          child: CircularProgressIndicator(color: primaryGreen),
-        ),
+        body: Center(child: CircularProgressIndicator(color: primaryGreen)),
       );
     }
 

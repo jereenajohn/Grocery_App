@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:grocery_app/views/Admin/add_country_page.dart';
 import 'package:grocery_app/views/Admin/add_district_page.dart';
+import 'package:grocery_app/views/Admin/manage_banners_page.dart';
 import 'add_state_page.dart';
 import 'manage_payment_methods_page.dart';
 
@@ -153,6 +154,13 @@ class AdminSettingsPage extends StatelessWidget {
                       subtitle: 'Manage payment gateways',
                       icon: Icons.payment_rounded,
                       page: const ManagePaymentMethodsPage(),
+                    ),
+                    menuTile(
+                      context: context,
+                      title: 'Add Banner',
+                      subtitle: 'Manage home page banners',
+                      icon: Icons.image_rounded,
+                      page: const ManageBannersPage(),
                     ),
                   ],
                 ),
