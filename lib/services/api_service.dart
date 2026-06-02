@@ -2015,4 +2015,62 @@ Future<void> deleteCartItem({required int productId}) async {
       throw Exception(errorMessage);
     }
   }
+
+  // ─── Checkout ───────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> checkout({
+    required String paymentMethod,
+    required String fullName,
+    required String phone,
+    required String address,
+    required String city,
+    required String state,
+    required String pincode,
+    required String country,
+    required String note,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/checkout/');
+    final body = {
+      "payment_method": paymentMethod,
+      "full_name": fullName,
+      "phone": phone,
+      "address": address,
+      "city": city,
+      "state": state,
+      "pincode": pincode,
+      "country": country,
+      "note": note,
+    };
+
+    print("CHECKOUT URL: $url");
+    print("CHECKOUT BODY: $body");
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(body),
+    );
+
+    print("CHECKOUT STATUS CODE: ${response.statusCode}");
+    print("CHECKOUT RESPONSE: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return decoded;
+    } else {
+      String errorMessage = "Checkout failed";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
 }
