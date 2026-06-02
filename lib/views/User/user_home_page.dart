@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:grocery_app/models/banner_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/address_model.dart';
 import '../../models/category_model.dart';
@@ -31,6 +32,9 @@ class _UserHomePageState extends State<UserHomePage> {
   List<CategoryModel> _categories = [];
   bool _categoriesLoading = true;
 
+  List<BannerModel> _banners = [];
+  bool _bannersLoading = true;
+
   final PageController _promoPageController = PageController();
   Timer? _promoTimer;
   int _currentPromoPage = 0;
@@ -49,6 +53,7 @@ class _UserHomePageState extends State<UserHomePage> {
     _loadShops();
     _loadCategories();
     _startPromoAutoScroll();
+    _loadBanners();
   }
 
   @override
@@ -61,7 +66,8 @@ class _UserHomePageState extends State<UserHomePage> {
   void _startPromoAutoScroll() {
     _promoTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!mounted) return;
-      final nextPage = (_currentPromoPage + 1) % 2;
+      if (_banners.isEmpty) return;
+      final nextPage = (_currentPromoPage + 1) % _banners.length;
       _promoPageController.animateToPage(
         nextPage,
         duration: const Duration(milliseconds: 600),
@@ -103,6 +109,21 @@ class _UserHomePageState extends State<UserHomePage> {
         }
       });
     } catch (_) {}
+  }
+
+  Future<void> _loadBanners() async {
+    setState(() => _bannersLoading = true);
+
+    try {
+      final banners = await _apiService.getBanners();
+
+      setState(() {
+        _banners = banners;
+        _bannersLoading = false;
+      });
+    } catch (e) {
+      setState(() => _bannersLoading = false);
+    }
   }
 
   Future<void> _loadShops() async {
@@ -730,135 +751,165 @@ class _UserHomePageState extends State<UserHomePage> {
     );
   }
 
-  Widget _buildPromoBanner() {
-    final List<Map<String, dynamic>> promos = [
-      {
-        'image': 'assets/image_assets/fruits.jpg',
-        'tag': 'FRUITS',
-        'title': 'Farm Fresh Fruits',
-        'subtitle': 'Seasonal Fruits at Best Prices',
-        'gradientColors': [const Color(0x66FFB300), const Color(0x66FF9100)],
-      },
-      {
-        'image': 'assets/image_assets/vegetables.jpg',
-        'tag': 'VEGETABLES',
-        'title': 'Premium Fresh Vegetables',
-        'subtitle': 'Seasonal Vegetables at Best Prices',
-        'gradientColors': [const Color(0x661B8F3A), const Color(0x660F5F28)],
-      },
-    ];
-
-    return Column(
-      children: [
-        Container(
-          margin: const EdgeInsets.fromLTRB(18, 18, 18, 0),
-          height: 148,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: PageView.builder(
-              controller: _promoPageController,
-              itemCount: promos.length,
-              onPageChanged: (index) {
-                setState(() => _currentPromoPage = index);
-              },
-              itemBuilder: (context, index) {
-                final promo = promos[index];
-                return Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.asset(promo['image'], fit: BoxFit.cover),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: promo['gradientColors'],
-
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      right: -20,
-                      bottom: -20,
-                      child: Icon(
-                        Icons.shopping_basket_rounded,
-                        size: 160,
-                        color: Colors.white.withOpacity(0.10),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.24),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              promo['tag'],
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            promo['title'],
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            promo['subtitle'],
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(promos.length, (index) {
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              height: 8,
-              width: _currentPromoPage == index ? 24 : 8,
-              decoration: BoxDecoration(
-                color: _currentPromoPage == index
-                    ? primaryGreen
-                    : Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            );
-          }),
-        ),
-      ],
+Widget _buildPromoBanner() {
+  if (_bannersLoading) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+      height: 148,
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Center(
+        child: CircularProgressIndicator(color: primaryGreen),
+      ),
     );
   }
+
+  if (_banners.isEmpty) {
+    return const SizedBox.shrink();
+  }
+
+  return Column(
+    children: [
+      Container(
+        margin: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+        height: 148,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: PageView.builder(
+            controller: _promoPageController,
+            itemCount: _banners.length,
+            onPageChanged: (index) {
+              setState(() => _currentPromoPage = index);
+            },
+            itemBuilder: (context, index) {
+              final banner = _banners[index];
+
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.network(
+                    banner.image,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) {
+                      return Container(
+                        color: lightGreen,
+                        child: Icon(
+                          Icons.image_not_supported_rounded,
+                          color: primaryGreen,
+                          size: 45,
+                        ),
+                      );
+                    },
+                  ),
+
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.black.withOpacity(0.50),
+                          Colors.black.withOpacity(0.10),
+                        ],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                    ),
+                  ),
+
+                  Positioned(
+                    right: -20,
+                    bottom: -20,
+                    child: Icon(
+                      Icons.shopping_basket_rounded,
+                      size: 160,
+                      color: Colors.white.withOpacity(0.10),
+                    ),
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.24),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text(
+                            "OFFER",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 8),
+
+                        Text(
+                          banner.title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+
+                        const SizedBox(height: 4),
+
+                        Text(
+                          banner.description,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+
+      const SizedBox(height: 10),
+
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(_banners.length, (index) {
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            height: 8,
+            width: _currentPromoPage == index ? 24 : 8,
+            decoration: BoxDecoration(
+              color: _currentPromoPage == index
+                  ? primaryGreen
+                  : Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          );
+        }),
+      ),
+    ],
+  );
+}
 
   Widget _buildShops() {
     return Column(
@@ -959,6 +1010,8 @@ class _UserHomePageState extends State<UserHomePage> {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(16),
                             color: lightGreen,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: primaryGreen, width: 1.5),
                           ),
                           child: Stack(
                             fit: StackFit.expand,

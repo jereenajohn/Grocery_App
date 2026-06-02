@@ -15,6 +15,7 @@ import '../models/shop_model.dart';
 import '../models/category_model.dart';
 import '../models/cart_item_model.dart';
 import '../models/payment_method_model.dart';
+import '../models/banner_model.dart';
 
 class ApiService {
   // ─── OTP ────────────────────────────────────────────────────
@@ -1084,9 +1085,7 @@ class ApiService {
     request.fields['low_stock_threshold'] = lowStockThreshold.toStringAsFixed(2);
 
     if (image != null) {
-      request.files.add(
-        await http.MultipartFile.fromPath('image', image.path),
-      );
+      request.files.add(await http.MultipartFile.fromPath('image', image.path));
     }
 
     final streamedResponse = await request.send();
@@ -1098,7 +1097,8 @@ class ApiService {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to add product";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -1120,7 +1120,9 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
-    final url = Uri.parse('${ApiConstants.api}api/grocery/products/update/$productId/');
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/products/update/$productId/',
+    );
 
     print("UPDATE PRODUCT URL: $url");
 
@@ -1136,9 +1138,7 @@ class ApiService {
     request.fields['low_stock_threshold'] = lowStockThreshold.toStringAsFixed(2);
 
     if (image != null) {
-      request.files.add(
-        await http.MultipartFile.fromPath('image', image.path),
-      );
+      request.files.add(await http.MultipartFile.fromPath('image', image.path));
     }
 
     final streamedResponse = await request.send();
@@ -1151,7 +1151,8 @@ class ApiService {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to update product";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -1163,7 +1164,9 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
-    final url = Uri.parse('${ApiConstants.api}api/grocery/products/update/$productId/');
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/products/update/$productId/',
+    );
 
     print("DELETE PRODUCT URL: $url");
 
@@ -1178,7 +1181,9 @@ class ApiService {
     print("DELETE PRODUCT STATUS CODE: ${response.statusCode}");
     print("DELETE PRODUCT RESPONSE: ${response.body}");
 
-    if (response.statusCode != 200 && response.statusCode != 204 && response.statusCode != 201) {
+    if (response.statusCode != 200 &&
+        response.statusCode != 204 &&
+        response.statusCode != 201) {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to delete product";
       if (decoded is Map<String, dynamic>) {
@@ -1190,7 +1195,6 @@ class ApiService {
       throw Exception(errorMessage);
     }
   }
-
 
   // ─── Addresses ───────────────────────────────────────────────
 
@@ -1470,10 +1474,7 @@ class ApiService {
         "Content-Type": "application/json",
         "Authorization": "Bearer $token",
       },
-      body: jsonEncode({
-        "old_phone": oldPhone,
-        "new_phone": newPhone,
-      }),
+      body: jsonEncode({"old_phone": oldPhone, "new_phone": newPhone}),
     );
 
     final decoded = jsonDecode(response.body);
@@ -1582,7 +1583,10 @@ class ApiService {
 
   // ─── Shops by Category ──────────────────────────────────────
 
-  Future<Map<String, dynamic>> getShopsByCategory({required int categoryId, int? page}) async {
+  Future<Map<String, dynamic>> getShopsByCategory({
+    required int categoryId,
+    int? page,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
@@ -1633,7 +1637,8 @@ class ApiService {
     } else {
       String errorMessage = "Failed to load shops for category";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -1668,7 +1673,9 @@ class ApiService {
       },
     );
 
-    print("GET PRODUCTS BY SHOP PRIORITIZE CATEGORY STATUS: ${response.statusCode}");
+    print(
+      "GET PRODUCTS BY SHOP PRIORITIZE CATEGORY STATUS: ${response.statusCode}",
+    );
     print("GET PRODUCTS BY SHOP PRIORITIZE CATEGORY BODY: ${response.body}");
 
     final decoded = jsonDecode(response.body);
@@ -1698,7 +1705,8 @@ class ApiService {
     } else {
       String errorMessage = "Failed to load products";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -1728,14 +1736,16 @@ class ApiService {
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final decoded = jsonDecode(response.body);
-      final List<dynamic> items =
-          decoded is List ? decoded : (decoded['results'] ?? []);
+      final List<dynamic> items = decoded is List
+          ? decoded
+          : (decoded['results'] ?? []);
       return items.map((e) => CartItemModel.fromJson(e)).toList();
     } else {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to load cart items";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -1743,15 +1753,15 @@ class ApiService {
     }
   }
 
-  Future<void> addToCart({required int productId, required int quantity}) async {
+  Future<void> addToCart({
+    required int productId,
+    required int quantity,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
     final url = Uri.parse('${ApiConstants.api}api/grocery/cart/view/');
-    final body = {
-      "product_id": productId,
-      "quantity": quantity,
-    };
+    final body = {"product_id": productId, "quantity": quantity};
 
     print("ADD TO CART URL: $url");
     print("ADD TO CART BODY: $body");
@@ -1772,7 +1782,8 @@ class ApiService {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to add to cart";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -1780,7 +1791,7 @@ class ApiService {
     }
   }
 
-Future<void> deleteCartItem({required int productId}) async {
+  Future<void> deleteCartItem({required int productId}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
@@ -1837,7 +1848,9 @@ Future<void> deleteCartItem({required int productId}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
-    final url = Uri.parse('${ApiConstants.api}api/grocery/payment/methods/view/');
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/payment/methods/view/',
+    );
     print("GET PAYMENT METHODS URL: $url");
 
     final response = await http.get(
@@ -1853,13 +1866,15 @@ Future<void> deleteCartItem({required int productId}) async {
 
     final decoded = jsonDecode(response.body);
     if (response.statusCode == 200 || response.statusCode == 201) {
-      final List<dynamic> items =
-          decoded is List ? decoded : (decoded['results'] ?? []);
+      final List<dynamic> items = decoded is List
+          ? decoded
+          : (decoded['results'] ?? []);
       return items.map((e) => PaymentMethodModel.fromJson(e)).toList();
     } else {
       String errorMessage = "Failed to load payment methods";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -1874,11 +1889,10 @@ Future<void> deleteCartItem({required int productId}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
-    final url = Uri.parse('${ApiConstants.api}api/grocery/payment/methods/view/');
-    final body = {
-      "name": name,
-      "code": code,
-    };
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/payment/methods/view/',
+    );
+    final body = {"name": name, "code": code};
 
     print("CREATE PAYMENT METHOD URL: $url");
     print("CREATE PAYMENT METHOD BODY: $body");
@@ -1901,7 +1915,8 @@ Future<void> deleteCartItem({required int productId}) async {
     } else {
       String errorMessage = "Failed to create payment method";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -1913,7 +1928,9 @@ Future<void> deleteCartItem({required int productId}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
-    final url = Uri.parse('${ApiConstants.api}api/grocery/payment/methods/update/$id/');
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/payment/methods/update/$id/',
+    );
     print("GET PAYMENT METHOD DETAILS URL: $url");
 
     final response = await http.get(
@@ -1933,7 +1950,8 @@ Future<void> deleteCartItem({required int productId}) async {
     } else {
       String errorMessage = "Failed to load payment method details";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -1950,12 +1968,10 @@ Future<void> deleteCartItem({required int productId}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
-    final url = Uri.parse('${ApiConstants.api}api/grocery/payment/methods/update/$id/');
-    final body = {
-      "name": name,
-      "code": code,
-      "is_active": isActive,
-    };
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/payment/methods/update/$id/',
+    );
+    final body = {"name": name, "code": code, "is_active": isActive};
 
     print("UPDATE PAYMENT METHOD URL: $url");
     print("UPDATE PAYMENT METHOD BODY: $body");
@@ -1978,7 +1994,8 @@ Future<void> deleteCartItem({required int productId}) async {
     } else {
       String errorMessage = "Failed to update payment method";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -1990,7 +2007,9 @@ Future<void> deleteCartItem({required int productId}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
-    final url = Uri.parse('${ApiConstants.api}api/grocery/payment/methods/update/$id/');
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/payment/methods/update/$id/',
+    );
     print("DELETE PAYMENT METHOD URL: $url");
 
     final response = await http.delete(
@@ -2004,11 +2023,14 @@ Future<void> deleteCartItem({required int productId}) async {
     print("DELETE PAYMENT METHOD STATUS CODE: ${response.statusCode}");
     print("DELETE PAYMENT METHOD RESPONSE: ${response.body}");
 
-    if (response.statusCode != 200 && response.statusCode != 204 && response.statusCode != 201) {
+    if (response.statusCode != 200 &&
+        response.statusCode != 204 &&
+        response.statusCode != 201) {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to delete payment method";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
@@ -2066,11 +2088,113 @@ Future<void> deleteCartItem({required int productId}) async {
     } else {
       String errorMessage = "Checkout failed";
       if (decoded is Map<String, dynamic>) {
-        errorMessage = decoded['detail']?.toString() ??
+        errorMessage =
+            decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
       }
       throw Exception(errorMessage);
+    }
+  }
+
+  Future<List<BannerModel>> getBanners() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/banners/view/');
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final List items = decoded is List ? decoded : decoded['results'] ?? [];
+      return items.map((e) => BannerModel.fromJson(e)).toList();
+    }
+
+    throw Exception("Failed to load banners");
+  }
+
+  Future<void> addBanner({
+    required String title,
+    required String description,
+    File? image,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/banners/view/');
+    final request = http.MultipartRequest('POST', url);
+
+    request.headers['Authorization'] = 'Bearer $token';
+    request.fields['title'] = title;
+    request.fields['description'] = description;
+
+    if (image != null) {
+      request.files.add(await http.MultipartFile.fromPath('image', image.path));
+    }
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception("Failed to add banner");
+    }
+  }
+
+  Future<void> updateBanner({
+    required int bannerId,
+    required String title,
+    required String description,
+    File? image,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/banners/update/$bannerId/',
+    );
+
+    final request = http.MultipartRequest('PUT', url);
+    request.headers['Authorization'] = 'Bearer $token';
+    request.fields['title'] = title;
+    request.fields['description'] = description;
+
+    if (image != null) {
+      request.files.add(await http.MultipartFile.fromPath('image', image.path));
+    }
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception("Failed to update banner");
+    }
+  }
+
+  Future<void> deleteBanner({required int bannerId}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/banners/update/$bannerId/',
+    );
+
+    final response = await http.delete(
+      url,
+      headers: {"Authorization": "Bearer $token"},
+    );
+
+    if (response.statusCode != 200 &&
+        response.statusCode != 204 &&
+        response.statusCode != 201) {
+      throw Exception("Failed to delete banner");
     }
   }
 }
