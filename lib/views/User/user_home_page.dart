@@ -910,8 +910,7 @@ Widget _buildPromoBanner() {
     ],
   );
 }
-
-  Widget _buildShops() {
+Widget _buildShops() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1010,8 +1009,6 @@ Widget _buildPromoBanner() {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(16),
                             color: lightGreen,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: primaryGreen, width: 1.5),
                           ),
                           child: Stack(
                             fit: StackFit.expand,
@@ -1165,7 +1162,6 @@ Widget _buildPromoBanner() {
       ],
     );
   }
-
   Widget _buildCardPlaceholder() {
     return Container(
       decoration: BoxDecoration(
