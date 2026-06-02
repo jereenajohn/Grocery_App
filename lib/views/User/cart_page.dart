@@ -7,6 +7,8 @@ import '../../models/country_model.dart';
 import '../../models/state_model.dart';
 import '../../models/district_model.dart';
 import '../../services/api_service.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
+import '../../constants/api_constants.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -58,15 +60,27 @@ class _CartPageState extends State<CartPage> {
   bool _isSubmittingOrder = false;
   bool _useNewAddress = false;
 
+  late Razorpay _razorpay;
+
+  String? _pendingRazorpayOrderId;
+
   @override
   void initState() {
     super.initState();
+
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+
     _loadCart();
     _loadCheckoutData();
   }
 
   @override
   void dispose() {
+    _razorpay.clear();
+
     _nameCtrl.dispose();
     _phoneCtrl.dispose();
     _noteCtrl.dispose();
@@ -74,6 +88,7 @@ class _CartPageState extends State<CartPage> {
     _landmarkCtrl.dispose();
     _cityCtrl.dispose();
     _postalCtrl.dispose();
+
     super.dispose();
   }
 
@@ -186,6 +201,40 @@ class _CartPageState extends State<CartPage> {
         );
       }
     }
+  }
+
+  Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    try {
+      await _apiService.verifyRazorpayPayment(
+        razorpayOrderId: response.orderId ?? _pendingRazorpayOrderId ?? '',
+        razorpayPaymentId: response.paymentId ?? '',
+        razorpaySignature: response.signature ?? '',
+      );
+
+      setState(() => _isSubmittingOrder = false);
+      _showSuccessDialog();
+    } catch (e) {
+      setState(() => _isSubmittingOrder = false);
+      _showSnackBar(
+        e.toString().replaceFirst("Exception: ", ""),
+        Colors.redAccent,
+      );
+    }
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    setState(() => _isSubmittingOrder = false);
+    _showSnackBar(
+      response.message ?? "Payment failed or cancelled",
+      Colors.redAccent,
+    );
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    _showSnackBar(
+      "External wallet selected: ${response.walletName ?? ''}",
+      primaryGreen,
+    );
   }
 
   void _showSnackBar(String message, Color bgColor) {
@@ -1156,7 +1205,6 @@ class _CartPageState extends State<CartPage> {
     try {
       AddressModel finalAddress;
 
-      // Save Address if New Address is Selected
       if (_useNewAddress) {
         finalAddress = await _apiService.addAddress(
           address: _addressCtrl.text.trim(),
@@ -1171,42 +1219,92 @@ class _CartPageState extends State<CartPage> {
         finalAddress = _selectedAddress!;
       }
 
-      // Safeguard for State & Country names if not populated in the model
       String stateName = finalAddress.stateName;
       if (stateName.isEmpty && _selectedState != null) {
         stateName = _selectedState!.name;
       }
+
       String countryName = finalAddress.countryName;
       if (countryName.isEmpty && _selectedCountry != null) {
         countryName = _selectedCountry!.name;
       }
 
-      // Normalize payment method code (handle variations like "COD", "Cash on Delivery", etc.)
       String methodCode = _selectedPaymentMethod!.code.trim().toLowerCase();
       final methodName = _selectedPaymentMethod!.name.trim().toLowerCase();
 
-      if (methodCode == "cod" ||
+      final bool isCod =
+          methodCode == "cod" ||
           methodCode.contains("cash") ||
           methodName.contains("cash") ||
           methodName.contains("cod") ||
-          methodName.contains("delivery")) {
-          methodCode = "cod";
+          methodName.contains("delivery");
+
+      final bool isUpi =
+          methodCode.contains("upi") ||
+          methodCode.contains("online") ||
+          methodName.contains("upi") ||
+          methodName.contains("online") ||
+          methodName.contains("razorpay");
+
+      if (isCod) {
+        await _apiService.checkout(
+          paymentMethod: "cod",
+          fullName: _nameCtrl.text.trim(),
+          phone: _phoneCtrl.text.trim(),
+          address: finalAddress.address,
+          city: finalAddress.city,
+          state: stateName,
+          pincode: finalAddress.postalCode,
+          country: countryName,
+          note: _noteCtrl.text.trim(),
+        );
+
+        setState(() => _isSubmittingOrder = false);
+        _showSuccessDialog();
+        return;
       }
 
-      // Trigger Checkout
-      await _apiService.checkout(
-        paymentMethod: methodCode,
-        fullName: _nameCtrl.text.trim(),
-        phone: _phoneCtrl.text.trim(),
-        address: finalAddress.address,
-        city: finalAddress.city,
-        state: stateName,
-        pincode: finalAddress.postalCode,
-        country: countryName,
-        note: _noteCtrl.text.trim(),
-      );
+      if (isUpi) {
+        final razorpayOrder = await _apiService.createRazorpayOrder(
+          amount: _subtotal,
+          fullName: _nameCtrl.text.trim(),
+          phone: _phoneCtrl.text.trim(),
+          address: finalAddress.address,
+          city: finalAddress.city,
+          state: stateName,
+          pincode: finalAddress.postalCode,
+          country: countryName,
+          note: _noteCtrl.text.trim(),
+        );
 
-      _showSuccessDialog();
+        _pendingRazorpayOrderId = razorpayOrder['order_id']?.toString();
+           
+        final options = {
+          'key': ApiConstants.razorpayKeyId,
+          'amount': razorpayOrder['amount'],
+          'currency': razorpayOrder['currency'] ?? 'INR',
+          'name': 'Grocery App',
+          'description': 'Grocery Order Payment',
+          'order_id': razorpayOrder['order_id'],
+          'prefill': {
+            'contact': _phoneCtrl.text.trim(),
+            'name': _nameCtrl.text.trim(),
+          },
+          'theme': {'color': '#1B8F3A'},
+          'method': {
+            'upi': true,
+            'card': true,
+            'netbanking': true,
+            'wallet': true,
+          },
+        };
+
+        _razorpay.open(options);
+        return;
+      }
+
+      _showSnackBar("Invalid payment method selected", Colors.redAccent);
+      setState(() => _isSubmittingOrder = false);
     } catch (e) {
       setState(() => _isSubmittingOrder = false);
       _showSnackBar(
