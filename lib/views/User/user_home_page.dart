@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/address_model.dart';
 import '../../models/category_model.dart';
 import '../../models/shop_model.dart';
@@ -9,6 +10,8 @@ import '../request_otp_page.dart';
 import 'category_shops_page.dart';
 import 'shop_products_page.dart';
 import 'cart_page.dart';
+import 'all_shops_page.dart';
+
 
 class UserHomePage extends StatefulWidget {
   const UserHomePage({super.key});
@@ -16,9 +19,9 @@ class UserHomePage extends StatefulWidget {
   @override
   State<UserHomePage> createState() => _UserHomePageState();
 }
-
 class _UserHomePageState extends State<UserHomePage> {
   final ApiService _apiService = ApiService();
+  final ScrollController _scrollController = ScrollController();
   Map<String, dynamic> _userData = {};
   bool _isLoading = true;
   int _activeNavIndex = 0;
@@ -52,9 +55,9 @@ class _UserHomePageState extends State<UserHomePage> {
   void dispose() {
     _promoTimer?.cancel();
     _promoPageController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
-
   void _startPromoAutoScroll() {
     _promoTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!mounted) return;
@@ -84,8 +87,20 @@ class _UserHomePageState extends State<UserHomePage> {
   Future<void> _loadAddresses() async {
     try {
       final addresses = await _apiService.getAddresses();
+      final prefs = await SharedPreferences.getInstance();
+      final selectedId = prefs.getInt('selected_address_id');
       setState(() {
-        _primaryAddress = addresses.isNotEmpty ? addresses.first : null;
+        if (addresses.isEmpty) {
+          _primaryAddress = null;
+        } else if (selectedId != null) {
+          try {
+            _primaryAddress = addresses.firstWhere((a) => a.id == selectedId);
+          } catch (_) {
+            _primaryAddress = addresses.first;
+          }
+        } else {
+          _primaryAddress = addresses.first;
+        }
       });
     } catch (_) {}
   }
@@ -107,7 +122,9 @@ class _UserHomePageState extends State<UserHomePage> {
     setState(() => _categoriesLoading = true);
     try {
       final result = await _apiService.getCategories();
-      final List<CategoryModel> cats = List<CategoryModel>.from(result['results'] ?? []);
+      final List<CategoryModel> cats = List<CategoryModel>.from(
+        result['results'] ?? [],
+      );
       setState(() {
         _categories = cats;
         _categoriesLoading = false;
@@ -120,31 +137,141 @@ class _UserHomePageState extends State<UserHomePage> {
   Map<String, dynamic> _getCategoryVisuals(String name) {
     final lower = name.toLowerCase();
     final Map<String, Map<String, dynamic>> mapping = {
-      'fruit': {'icon': Icons.apple_rounded, 'color': const Color(0xFFFFEBEE), 'iconColor': const Color(0xFFEF5350)},
-      'vegetable': {'icon': Icons.eco_rounded, 'color': const Color(0xFFE8F5E9), 'iconColor': const Color(0xFF4CAF50)},
-      'veggie': {'icon': Icons.eco_rounded, 'color': const Color(0xFFE8F5E9), 'iconColor': const Color(0xFF4CAF50)},
-      'dairy': {'icon': Icons.egg_alt_rounded, 'color': const Color(0xFFFFF8E1), 'iconColor': const Color(0xFFFFB300)},
-      'milk': {'icon': Icons.egg_alt_rounded, 'color': const Color(0xFFFFF8E1), 'iconColor': const Color(0xFFFFB300)},
-      'bakery': {'icon': Icons.cookie_rounded, 'color': const Color(0xFFEFEBE9), 'iconColor': const Color(0xFF8D6E63)},
-      'bread': {'icon': Icons.cookie_rounded, 'color': const Color(0xFFEFEBE9), 'iconColor': const Color(0xFF8D6E63)},
-      'meat': {'icon': Icons.restaurant_rounded, 'color': const Color(0xFFFBE9E7), 'iconColor': const Color(0xFFFF5722)},
-      'chicken': {'icon': Icons.restaurant_rounded, 'color': const Color(0xFFFBE9E7), 'iconColor': const Color(0xFFFF5722)},
-      'fish': {'icon': Icons.set_meal_rounded, 'color': const Color(0xFFE0F2F1), 'iconColor': const Color(0xFF00897B)},
-      'seafood': {'icon': Icons.set_meal_rounded, 'color': const Color(0xFFE0F2F1), 'iconColor': const Color(0xFF00897B)},
-      'drink': {'icon': Icons.local_drink_rounded, 'color': const Color(0xFFE0F7FA), 'iconColor': const Color(0xFF00BCD4)},
-      'beverage': {'icon': Icons.local_drink_rounded, 'color': const Color(0xFFE0F7FA), 'iconColor': const Color(0xFF00BCD4)},
-      'juice': {'icon': Icons.local_drink_rounded, 'color': const Color(0xFFE0F7FA), 'iconColor': const Color(0xFF00BCD4)},
-      'snack': {'icon': Icons.fastfood_rounded, 'color': const Color(0xFFFFF3E0), 'iconColor': const Color(0xFFFF9800)},
-      'frozen': {'icon': Icons.ac_unit_rounded, 'color': const Color(0xFFE3F2FD), 'iconColor': const Color(0xFF2196F3)},
-      'spice': {'icon': Icons.grass_rounded, 'color': const Color(0xFFFFF8E1), 'iconColor': const Color(0xFFFF8F00)},
-      'grain': {'icon': Icons.grain_rounded, 'color': const Color(0xFFF3E5F5), 'iconColor': const Color(0xFF9C27B0)},
-      'rice': {'icon': Icons.grain_rounded, 'color': const Color(0xFFF3E5F5), 'iconColor': const Color(0xFF9C27B0)},
-      'cereal': {'icon': Icons.grain_rounded, 'color': const Color(0xFFF3E5F5), 'iconColor': const Color(0xFF9C27B0)},
-      'organic': {'icon': Icons.spa_rounded, 'color': const Color(0xFFE8F5E9), 'iconColor': const Color(0xFF388E3C)},
-      'cleaning': {'icon': Icons.cleaning_services_rounded, 'color': const Color(0xFFE8EAF6), 'iconColor': const Color(0xFF3F51B5)},
-      'personal': {'icon': Icons.person_rounded, 'color': const Color(0xFFFCE4EC), 'iconColor': const Color(0xFFE91E63)},
-      'baby': {'icon': Icons.child_care_rounded, 'color': const Color(0xFFF3E5F5), 'iconColor': const Color(0xFFAB47BC)},
-      'pet': {'icon': Icons.pets_rounded, 'color': const Color(0xFFE8F5E9), 'iconColor': const Color(0xFF66BB6A)},
+      'fruit': {
+        'icon': Icons.apple_rounded,
+        'color': const Color(0xFFFFEBEE),
+        'iconColor': const Color(0xFFEF5350),
+      },
+      'vegetable': {
+        'icon': Icons.eco_rounded,
+        'color': const Color(0xFFE8F5E9),
+        'iconColor': const Color(0xFF4CAF50),
+      },
+      'veggie': {
+        'icon': Icons.eco_rounded,
+        'color': const Color(0xFFE8F5E9),
+        'iconColor': const Color(0xFF4CAF50),
+      },
+      'dairy': {
+        'icon': Icons.egg_alt_rounded,
+        'color': const Color(0xFFFFF8E1),
+        'iconColor': const Color(0xFFFFB300),
+      },
+      'milk': {
+        'icon': Icons.egg_alt_rounded,
+        'color': const Color(0xFFFFF8E1),
+        'iconColor': const Color(0xFFFFB300),
+      },
+      'ice cream': {
+        'icon': Icons.icecream,
+        'color': const Color(0xFFFFF8E1),
+        'iconColor': const Color(0xFFFFB300),
+      },
+      'bakery': {
+        'icon': Icons.cookie_rounded,
+        'color': const Color(0xFFEFEBE9),
+        'iconColor': const Color(0xFF8D6E63),
+      },
+      'biscuit': {
+        'icon': Icons.cookie_rounded,
+        'color': const Color(0xFFEFEBE9),
+        'iconColor': const Color(0xFF8D6E63),
+      },
+      'bread': {
+        'icon': Icons.cookie_rounded,
+        'color': const Color(0xFFEFEBE9),
+        'iconColor': const Color(0xFF8D6E63),
+      },
+      'meat': {
+        'icon': Icons.restaurant_rounded,
+        'color': const Color(0xFFFBE9E7),
+        'iconColor': const Color(0xFFFF5722),
+      },
+      'chicken': {
+        'icon': Icons.restaurant_rounded,
+        'color': const Color(0xFFFBE9E7),
+        'iconColor': const Color(0xFFFF5722),
+      },
+      'fish': {
+        'icon': Icons.set_meal_rounded,
+        'color': const Color(0xFFE0F2F1),
+        'iconColor': const Color(0xFF00897B),
+      },
+      'seafood': {
+        'icon': Icons.set_meal_rounded,
+        'color': const Color(0xFFE0F2F1),
+        'iconColor': const Color(0xFF00897B),
+      },
+      'drink': {
+        'icon': Icons.local_drink_rounded,
+        'color': const Color(0xFFE0F7FA),
+        'iconColor': const Color(0xFF00BCD4),
+      },
+      'beverage': {
+        'icon': Icons.local_drink_rounded,
+        'color': const Color(0xFFE0F7FA),
+        'iconColor': const Color(0xFF00BCD4),
+      },
+      'juice': {
+        'icon': Icons.local_drink_rounded,
+        'color': const Color(0xFFE0F7FA),
+        'iconColor': const Color(0xFF00BCD4),
+      },
+      'snack': {
+        'icon': Icons.fastfood_rounded,
+        'color': const Color(0xFFFFF3E0),
+        'iconColor': const Color(0xFFFF9800),
+      },
+      'frozen': {
+        'icon': Icons.ac_unit_rounded,
+        'color': const Color(0xFFE3F2FD),
+        'iconColor': const Color(0xFF2196F3),
+      },
+      'spice': {
+        'icon': Icons.grass_rounded,
+        'color': const Color(0xFFFFF8E1),
+        'iconColor': const Color(0xFFFF8F00),
+      },
+      'grain': {
+        'icon': Icons.grain_rounded,
+        'color': const Color(0xFFF3E5F5),
+        'iconColor': const Color(0xFF9C27B0),
+      },
+      'rice': {
+        'icon': Icons.grain_rounded,
+        'color': const Color(0xFFF3E5F5),
+        'iconColor': const Color(0xFF9C27B0),
+      },
+      'cereal': {
+        'icon': Icons.grain_rounded,
+        'color': const Color(0xFFF3E5F5),
+        'iconColor': const Color(0xFF9C27B0),
+      },
+      'organic': {
+        'icon': Icons.spa_rounded,
+        'color': const Color(0xFFE8F5E9),
+        'iconColor': const Color(0xFF388E3C),
+      },
+      'cleaning': {
+        'icon': Icons.cleaning_services_rounded,
+        'color': const Color(0xFFE8EAF6),
+        'iconColor': const Color(0xFF3F51B5),
+      },
+      'personal': {
+        'icon': Icons.person_rounded,
+        'color': const Color(0xFFFCE4EC),
+        'iconColor': const Color(0xFFE91E63),
+      },
+      'baby': {
+        'icon': Icons.child_care_rounded,
+        'color': const Color(0xFFF3E5F5),
+        'iconColor': const Color(0xFFAB47BC),
+      },
+      'pet': {
+        'icon': Icons.pets_rounded,
+        'color': const Color(0xFFE8F5E9),
+        'iconColor': const Color(0xFF66BB6A),
+      },
     };
 
     for (final key in mapping.keys) {
@@ -152,7 +279,11 @@ class _UserHomePageState extends State<UserHomePage> {
     }
 
     // Default visuals for unknown categories
-    return {'icon': Icons.category_rounded, 'color': const Color(0xFFF5F5F5), 'iconColor': const Color(0xFF78909C)};
+    return {
+      'icon': Icons.category_rounded,
+      'color': const Color(0xFFF5F5F5),
+      'iconColor': const Color(0xFF78909C),
+    };
   }
 
   String _getGreeting() {
@@ -171,21 +302,35 @@ class _UserHomePageState extends State<UserHomePage> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Logout',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: const Text('Are you sure you want to log out?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel', style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Logout',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -256,7 +401,11 @@ class _UserHomePageState extends State<UserHomePage> {
                           ? NetworkImage(profilePicture)
                           : null,
                       child: profilePicture.isEmpty
-                          ? const Icon(Icons.person_rounded, color: Colors.white, size: 28)
+                          ? const Icon(
+                              Icons.person_rounded,
+                              color: Colors.white,
+                              size: 28,
+                            )
                           : null,
                     ),
                   ),
@@ -286,7 +435,12 @@ class _UserHomePageState extends State<UserHomePage> {
                 ],
               ),
               InkWell(
-                onTap: _logout,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CartPage()),
+                  );
+                },
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
                   padding: const EdgeInsets.all(10),
@@ -296,7 +450,7 @@ class _UserHomePageState extends State<UserHomePage> {
                     border: Border.all(color: Colors.white.withOpacity(0.2)),
                   ),
                   child: const Icon(
-                    Icons.logout_rounded,
+                    Icons.shopping_cart_rounded,
                     color: Colors.white,
                     size: 22,
                   ),
@@ -323,7 +477,11 @@ class _UserHomePageState extends State<UserHomePage> {
               borderRadius: BorderRadius.circular(18),
               child: Row(
                 children: [
-                  const Icon(Icons.location_on_rounded, color: Colors.redAccent, size: 18),
+                  const Icon(
+                    Icons.location_on_rounded,
+                    color: Colors.redAccent,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -376,7 +534,10 @@ class _UserHomePageState extends State<UserHomePage> {
               child: TextField(
                 decoration: InputDecoration(
                   hintText: 'Search fresh foods, veggies...',
-                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                  hintStyle: TextStyle(
+                    color: Colors.grey.shade400,
+                    fontSize: 14,
+                  ),
                   prefixIcon: Icon(Icons.search_rounded, color: primaryGreen),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(vertical: 14),
@@ -489,8 +650,11 @@ class _UserHomePageState extends State<UserHomePage> {
             ),
             child: Row(
               children: [
-                Icon(Icons.category_outlined,
-                    color: Colors.grey.shade400, size: 32),
+                Icon(
+                  Icons.category_outlined,
+                  color: Colors.grey.shade400,
+                  size: 32,
+                ),
                 const SizedBox(width: 14),
                 Text(
                   'No categories available',
@@ -522,36 +686,41 @@ class _UserHomePageState extends State<UserHomePage> {
                     );
                   },
                   child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 6),
-                  child: Column(
-                    children: [
-                      Container(
-                        height: 64,
-                        width: 64,
-                        decoration: BoxDecoration(
-                          color: visuals['color'],
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: (visuals['iconColor'] as Color).withOpacity(0.06),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
+                    margin: const EdgeInsets.symmetric(horizontal: 6),
+                    child: Column(
+                      children: [
+                        Container(
+                          height: 64,
+                          width: 64,
+                          decoration: BoxDecoration(
+                            color: visuals['color'],
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: (visuals['iconColor'] as Color)
+                                    .withOpacity(0.06),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            visuals['icon'],
+                            color: visuals['iconColor'],
+                            size: 28,
+                          ),
                         ),
-                        child: Icon(visuals['icon'], color: visuals['iconColor'], size: 28),
-                      ),
-                      const SizedBox(height: 7),
-                      Text(
-                        cat.name,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey.shade800,
+                        const SizedBox(height: 7),
+                        Text(
+                          cat.name,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade800,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -597,15 +766,12 @@ class _UserHomePageState extends State<UserHomePage> {
                 return Stack(
                   fit: StackFit.expand,
                   children: [
-                    Image.asset(
-                      promo['image'],
-                      fit: BoxFit.cover,
-                    ),
+                    Image.asset(promo['image'], fit: BoxFit.cover),
                     Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: promo['gradientColors'],
-                          
+
                           begin: Alignment.centerLeft,
                           end: Alignment.centerRight,
                         ),
@@ -628,7 +794,9 @@ class _UserHomePageState extends State<UserHomePage> {
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.24),
                               borderRadius: BorderRadius.circular(10),
@@ -692,8 +860,6 @@ class _UserHomePageState extends State<UserHomePage> {
     );
   }
 
-
-
   Widget _buildShops() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -745,8 +911,11 @@ class _UserHomePageState extends State<UserHomePage> {
             ),
             child: Row(
               children: [
-                Icon(Icons.storefront_outlined,
-                    color: Colors.grey.shade400, size: 32),
+                Icon(
+                  Icons.storefront_outlined,
+                  color: Colors.grey.shade400,
+                  size: 32,
+                ),
                 const SizedBox(width: 14),
                 Text(
                   'No shops available nearby',
@@ -760,17 +929,13 @@ class _UserHomePageState extends State<UserHomePage> {
           )
         else
           SizedBox(
-            height: 168,
+            height: 200,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: _shops.length,
               itemBuilder: (context, index) {
                 final shop = _shops[index];
-                final initials =
-                    '${shop.firstName.isNotEmpty ? shop.firstName[0] : ''}${shop.lastName.isNotEmpty ? shop.lastName[0] : ''}'
-                        .toUpperCase();
-                final isApproved = shop.approvalStatus == 'approved';
 
                 return GestureDetector(
                   onTap: () {
@@ -782,118 +947,157 @@ class _UserHomePageState extends State<UserHomePage> {
                     );
                   },
                   child: Container(
-                    width: 140,
-                    margin: const EdgeInsets.symmetric(horizontal: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: Colors.green.shade50),
-                      boxShadow: [
-                        BoxShadow(
-                          color: primaryGreen.withOpacity(0.06),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
+                    width: 150,
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Avatar
+                        // Cover Image Block
                         Container(
-                          width: 62,
-                          height: 62,
+                          height: 110,
+                          width: 150,
                           decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
                             color: lightGreen,
-                            shape: BoxShape.circle,
-                            border:
-                                Border.all(color: primaryGreen, width: 1.5),
                           ),
-                          child: shop.profilePicture != null
-                              ? ClipOval(
-                                  child: Image.network(
-                                    shop.profilePicture!,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Center(
-                                      child: Text(
-                                        initials,
-                                        style: TextStyle(
-                                          color: primaryGreen,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 20,
-                                        ),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              // Image
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: shop.productImage != null
+                                    ? Image.network(
+                                        shop.productImage!,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                _buildCardPlaceholder(),
+                                      )
+                                    : _buildCardPlaceholder(),
+                              ),
+                              // Bottom Gradient Overlay
+                              Positioned.fill(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          Colors.transparent,
+                                          Colors.black.withOpacity(0.05),
+                                          Colors.black.withOpacity(0.85),
+                                        ],
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
                                       ),
                                     ),
                                   ),
-                                )
-                              : Center(
-                                  child: Text(
-                                    initials,
-                                    style: TextStyle(
-                                      color: primaryGreen,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 20,
-                                    ),
+                                ),
+                              ),
+                              // Favorite Heart Icon
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.all(5),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.favorite_border_rounded,
+                                    color: Colors.white,
+                                    size: 16,
                                   ),
                                 ),
-                        ),
-                        const SizedBox(height: 10),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          child: Text(
-                            shop.shop_name,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w900,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
+                              ),
+                              // Price Tag Overlay
+                              if (shop.productPrice != null)
+                                Positioned(
+                                  bottom: 8,
+                                  left: 10,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'ITEMS',
+                                        style: TextStyle(
+                                          color: Colors.white.withOpacity(0.9),
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      Text(
+                                        'AT ₹${shop.productPrice!.toStringAsFixed(0)}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          shop.districtName,
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            color: Colors.grey.shade500,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isApproved
-                                ? const Color(0xFFE8F5E9)
-                                : const Color(0xFFFFF3E0),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
+                        // Shop details below the image
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                isApproved
-                                    ? Icons.check_circle_rounded
-                                    : Icons.store_rounded,
-                                size: 10,
-                                color: isApproved
-                                    ? primaryGreen
-                                    : Colors.orange.shade700,
-                              ),
-                              const SizedBox(width: 4),
                               Text(
-                                isApproved ? 'Open' : 'View',
-                                style: TextStyle(
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: isApproved
-                                      ? primaryGreen
-                                      : Colors.orange.shade700,
+                                shop.shop_name,
+                                style: const TextStyle(
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF1E1E1E),
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 3),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF1B8F3A),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.star_rounded,
+                                      color: Colors.white,
+                                      size: 10,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '4.5 • 25-30 mins',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.grey.shade800,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Grocery • ${shop.districtName}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey.shade500,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
@@ -909,12 +1113,31 @@ class _UserHomePageState extends State<UserHomePage> {
     );
   }
 
+  Widget _buildCardPlaceholder() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [lightGreen, primaryGreen.withOpacity(0.2)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.storefront_rounded,
+          color: primaryGreen.withOpacity(0.4),
+          size: 32,
+        ),
+      ),
+    );
+  }
+
   Widget _buildBottomNavBar() {
     final List<Map<String, dynamic>> navItems = [
       {'icon': Icons.home_rounded, 'label': 'Home'},
-      {'icon': Icons.shopping_cart_rounded, 'label': 'Cart'},
-      {'icon': Icons.receipt_long_rounded, 'label': 'Orders'},
-      {'icon': Icons.location_on_rounded, 'label': 'Addresses'},
+      {'icon': Icons.storefront_rounded, 'label': 'Shops'},
+      {'icon': Icons.settings_rounded, 'label': 'Settings'},
+      {'icon': Icons.logout_rounded, 'label': 'Logout'},
     ];
 
     return Container(
@@ -941,31 +1164,41 @@ class _UserHomePageState extends State<UserHomePage> {
             final item = navItems[index];
             return InkWell(
               onTap: () async {
+                if (index == 0) {
+                  setState(() {
+                    _activeNavIndex = index;
+                  });
+                  if (_scrollController.hasClients) {
+                    _scrollController.animateTo(
+                      0.0,
+                      duration: const Duration(milliseconds: 500),
+                      curve: Curves.easeInOut,
+                    );
+                  }
+                  return;
+                }
                 if (index == 1) {
-                  // Cart tab
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const CartPage()),
-                  );
+                  setState(() {
+                    _activeNavIndex = index;
+                  });
+                  return;
+                }
+                if (index == 2) {
+                  _showSettingsBottomSheet();
                   return;
                 }
                 if (index == 3) {
-                  // Addresses tab
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const AddressPage()),
-                  );
-                  _loadAddresses();
+                  _logout();
                   return;
                 }
-                setState(() {
-                  _activeNavIndex = index;
-                });
               },
               borderRadius: BorderRadius.circular(20),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: active ? lightGreen : Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
@@ -999,21 +1232,232 @@ class _UserHomePageState extends State<UserHomePage> {
     );
   }
 
+  void _showSettingsBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(32),
+              topRight: Radius.circular(32),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 20,
+                offset: const Offset(0, -6),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: lightGreen,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.settings_rounded, color: primaryGreen, size: 24),
+                  ),
+                  const SizedBox(width: 14),
+                  Text(
+                    'Settings',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: Colors.green.shade50),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 28,
+                      backgroundColor: lightGreen,
+                      child: Text(
+                        _userData['first_name'] != null && _userData['first_name'].toString().isNotEmpty
+                            ? _userData['first_name'].toString()[0].toUpperCase()
+                            : 'U',
+                        style: TextStyle(
+                          color: primaryGreen,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${_userData['first_name'] ?? ''} ${_userData['last_name'] ?? ''}'.trim(),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            _userData['email'] ?? 'No email set',
+                            style: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            _userData['phone'] ?? 'No phone set',
+                            style: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              _buildSettingsActionTile(
+                icon: Icons.location_on_rounded,
+                title: 'Manage Addresses',
+                subtitle: 'Add or update your delivery points',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AddressPage()),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+              _buildSettingsActionTile(
+                icon: Icons.logout_rounded,
+                title: 'Logout',
+                subtitle: 'Sign out of your account securely',
+                iconColor: Colors.redAccent,
+                onTap: () {
+                  Navigator.pop(context);
+                  _logout();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSettingsActionTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    Color? iconColor,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.green.shade50.withOpacity(0.5)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: (iconColor ?? primaryGreen).withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: iconColor ?? primaryGreen,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey.shade500,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: Colors.grey.shade400,
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
         backgroundColor: background,
-        body: Center(
-          child: CircularProgressIndicator(color: primaryGreen),
-        ),
+        body: Center(child: CircularProgressIndicator(color: primaryGreen)),
       );
     }
 
-    return Scaffold(
-      backgroundColor: background,
-      body: SafeArea(
+    Widget bodyWidget;
+    if (_activeNavIndex == 1) {
+      bodyWidget = const AllShopsPage();
+    } else {
+      bodyWidget = SafeArea(
         child: SingleChildScrollView(
+          controller: _scrollController,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1026,8 +1470,14 @@ class _UserHomePageState extends State<UserHomePage> {
             ],
           ),
         ),
-      ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: background,
+      body: bodyWidget,
       bottomNavigationBar: _buildBottomNavBar(),
     );
   }
 }
+

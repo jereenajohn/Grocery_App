@@ -4,6 +4,7 @@ import 'Admin/admin_home_page.dart';
 import 'Admin/register_page.dart';
 import 'User/user_home_page.dart';
 import 'Shop/shop_home_page.dart';
+import 'Shop/shop_status_pages.dart';
 
 
 class VerifyOtpPage extends StatefulWidget {
@@ -76,12 +77,31 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
             ),
           );
         } else if (userType == 'shop') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const ShopHomePage(),
-            ),
-          );
+          final String approvalStatus =
+              user is Map<String, dynamic> ? user['approval_status']?.toString().toLowerCase() ?? '' : '';
+
+          if (approvalStatus == 'approved') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const ShopHomePage(),
+              ),
+            );
+          } else if (approvalStatus == 'rejected') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const ShopRejectedPage(),
+              ),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const ShopPendingPage(),
+              ),
+            );
+          }
         } else if (userType == 'user') {
           Navigator.pushReplacement(
             context,
