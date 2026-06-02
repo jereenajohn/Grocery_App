@@ -878,26 +878,26 @@ class _UserHomePageState extends State<UserHomePage> {
 
         const SizedBox(height: 10),
 
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(_banners.length, (index) {
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              height: 8,
-              width: _currentPromoPage == index ? 24 : 8,
-              decoration: BoxDecoration(
-                color: _currentPromoPage == index
-                    ? primaryGreen
-                    : Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            );
-          }),
-        ),
-      ],
-    );
-  }
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(_banners.length, (index) {
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            height: 8,
+            width: _currentPromoPage == index ? 24 : 8,
+            decoration: BoxDecoration(
+              color: _currentPromoPage == index
+                  ? primaryGreen
+                  : Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          );
+        }),
+      ),
+    ],
+  );
+}
 
   Widget _buildShops() {
     return Column(
@@ -1151,7 +1151,6 @@ class _UserHomePageState extends State<UserHomePage> {
       ],
     );
   }
-
   Widget _buildCardPlaceholder() {
     return Container(
       decoration: BoxDecoration(

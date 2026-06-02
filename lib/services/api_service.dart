@@ -231,13 +231,15 @@ class ApiService {
     // 1. Try hitting the standard profile view endpoint
     final url = Uri.parse('${ApiConstants.api}api/grocery/profile/');
     try {
-      final response = await http.get(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer $token",
-        },
-      ).timeout(const Duration(seconds: 3));
+      final response = await http
+          .get(
+            url,
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer $token",
+            },
+          )
+          .timeout(const Duration(seconds: 3));
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
@@ -268,7 +270,7 @@ class ApiService {
               'email': item.email,
               'user_type': 'shop',
               'approval_status': status,
-            }
+            },
           };
         }
       }
@@ -1082,7 +1084,9 @@ class ApiService {
     request.fields['price'] = price;
     request.fields['stock'] = stock.toString();
     request.fields['unit'] = unit;
-    request.fields['low_stock_threshold'] = lowStockThreshold.toStringAsFixed(2);
+    request.fields['low_stock_threshold'] = lowStockThreshold.toStringAsFixed(
+      2,
+    );
 
     if (image != null) {
       request.files.add(await http.MultipartFile.fromPath('image', image.path));
@@ -1135,7 +1139,9 @@ class ApiService {
     request.fields['price'] = price;
     request.fields['stock'] = stock.toString();
     request.fields['unit'] = unit;
-    request.fields['low_stock_threshold'] = lowStockThreshold.toStringAsFixed(2);
+    request.fields['low_stock_threshold'] = lowStockThreshold.toStringAsFixed(
+      2,
+    );
 
     if (image != null) {
       request.files.add(await http.MultipartFile.fromPath('image', image.path));
@@ -2202,5 +2208,99 @@ class ApiService {
         response.statusCode != 201) {
       throw Exception("Failed to delete banner");
     }
+  }
+
+  Future<Map<String, dynamic>> createRazorpayOrder({
+    required double amount,
+    required String fullName,
+    required String phone,
+    required String address,
+    required String city,
+    required String state,
+    required String pincode,
+    required String country,
+    required String note,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/checkout/razorpay/create/',
+    );
+
+    final body = {
+      "amount": amount.toStringAsFixed(2),
+      "full_name": fullName,
+      "phone": phone,
+      "address": address,
+      "city": city,
+      "state": state,
+      "pincode": pincode,
+      "country": country,
+      "note": note,
+    };
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(body),
+    );
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return decoded;
+    }
+
+    throw Exception(
+      decoded['error'] ??
+          decoded['detail'] ??
+          decoded['message'] ??
+          "Failed to create Razorpay order",
+    );
+  }
+
+  Future<Map<String, dynamic>> verifyRazorpayPayment({
+    required String razorpayOrderId,
+    required String razorpayPaymentId,
+    required String razorpaySignature,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/checkout/razorpay/verify/',
+    );
+
+    final body = {
+      "razorpay_order_id": razorpayOrderId,
+      "razorpay_payment_id": razorpayPaymentId,
+      "razorpay_signature": razorpaySignature,
+    };
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(body),
+    );
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return decoded;
+    }
+
+    throw Exception(
+      decoded['message'] ??
+          decoded['error'] ??
+          decoded['detail'] ??
+          "Payment verification failed",
+    );
   }
 }
