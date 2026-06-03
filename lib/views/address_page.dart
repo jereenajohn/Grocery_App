@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'widgets/shimmer_loading.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/address_model.dart';
 import '../models/country_model.dart';
@@ -175,7 +176,10 @@ class _AddressPageState extends State<AddressPage> {
         ),
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: primaryGreen))
+          ? const Padding(
+              padding: EdgeInsets.all(16),
+              child: ProductsListShimmer(itemCount: 3),
+            )
           : _error != null
               ? _buildError()
               : _addresses.isEmpty
@@ -677,7 +681,10 @@ class _AddressFormPageState extends State<_AddressFormPage> {
         ),
       ),
       body: _isLoadingDropdowns
-          ? Center(child: CircularProgressIndicator(color: primaryGreen))
+          ? const Padding(
+              padding: EdgeInsets.all(20),
+              child: ProductsListShimmer(itemCount: 4),
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Form(

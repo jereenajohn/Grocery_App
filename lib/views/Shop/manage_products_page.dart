@@ -1,12 +1,14 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../widgets/shimmer_loading.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/api_service.dart';
 import '../../models/product_model.dart';
 import '../../models/category_model.dart';
 
 class ManageProductsPage extends StatefulWidget {
-  const ManageProductsPage({super.key});
+  final bool showBackButton;
+  const ManageProductsPage({super.key, this.showBackButton = true});
 
   @override
   State<ManageProductsPage> createState() => _ManageProductsPageState();
@@ -1181,11 +1183,13 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
       ),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-          ),
-          const SizedBox(width: 4),
+          if (widget.showBackButton) ...[
+            IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+            ),
+            const SizedBox(width: 4),
+          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1221,11 +1225,9 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
 
   Widget _buildProductList() {
     if (_isLoading) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 60),
-          child: CircularProgressIndicator(color: Color(0xFF1B8F3A)),
-        ),
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: ProductsListShimmer(),
       );
     }
 
@@ -1266,231 +1268,258 @@ class _ManageProductsPageState extends State<ManageProductsPage> {
       itemCount: _products.length,
       itemBuilder: (context, index) {
         final p = _products[index];
+        final bool isLowStock = p.lowStockWarning && !p.isOutOfStock;
+
         return Container(
-          margin: const EdgeInsets.only(bottom: 14),
+          margin: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 15,
+                offset: const Offset(0, 6),
+              ),
+            ],
             border: Border.all(
               color: p.isOutOfStock
                   ? Colors.red.shade100
-                  : (p.lowStockWarning ? Colors.orange.shade100 : Colors.green.shade50),
-              width: p.isOutOfStock ? 1.5 : 1,
+                  : (isLowStock
+                        ? Colors.orange.shade100
+                        : Colors.grey.shade100),
+              width: p.isOutOfStock || isLowStock ? 1.5 : 1,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.green.withOpacity(0.04),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Thumbnail / Icon
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: lightGreen,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: p.image != null && p.image!.isNotEmpty
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: Image.network(
-                            p.image!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Icon(
-                              Icons.fastfood_rounded,
-                              color: primaryGreen,
-                              size: 28,
-                            ),
-                          ),
-                        )
-                      : Icon(
-                          Icons.fastfood_rounded,
-                          color: primaryGreen,
-                          size: 28,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Premium Thumbnail with shadow and gradient fallback
+                  Container(
+                    width: 85,
+                    height: 85,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.02),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
-                ),
-                const SizedBox(width: 14),
-                // Details
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              p.name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 15,
+                      ],
+                    ),
+                    child: p.image != null && p.image!.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(18),
+                            child: Image.network(
+                              p.image!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  _buildFallbackThumbnail(),
+                            ),
+                          )
+                        : _buildFallbackThumbnail(),
+                  ),
+                  const SizedBox(width: 16),
+
+                  // Product Info Section
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Name & Actions Row
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                p.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 16,
+                                  color: Color(0xFF1E1E1E),
+                                  letterSpacing: 0.1,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                          ),
-                          // Stock status badge
-                          if (p.isOutOfStock)
+                            const SizedBox(width: 8),
+                            // Quick Action Buttons (Edit / Delete)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _buildActionButton(
+                                  icon: Icons.edit_rounded,
+                                  color: primaryGreen,
+                                  bgColor: lightGreen,
+                                  onPressed: () => _showEditProductDialog(p),
+                                ),
+                                const SizedBox(width: 8),
+                                _buildActionButton(
+                                  icon: Icons.delete_outline_rounded,
+                                  color: Colors.red.shade600,
+                                  bgColor: Colors.red.shade50,
+                                  onPressed: () =>
+                                      _showDeleteConfirmationDialog(p),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+
+                        // Category & Status Badges
+                        Row(
+                          children: [
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 8,
                                 vertical: 3,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.red.shade50,
+                                color: Colors.grey.shade100,
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.error_outline_rounded,
-                                    size: 12,
-                                    color: Colors.red.shade600,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Out of Stock',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.red.shade700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          else if (p.lowStockWarning)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.warning_amber_rounded,
-                                    size: 12,
-                                    color: Colors.orange.shade600,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Low Stock',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.orange.shade700,
-                                    ),
-                                  ),
-                                ],
+                              child: Text(
+                                p.categoryName.toUpperCase(),
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.grey.shade600,
+                                  letterSpacing: 0.3,
+                                ),
                               ),
                             ),
+                            if (p.isOutOfStock || isLowStock) ...[
+                              const SizedBox(width: 8),
+                              _buildStockBadge(p),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Description
+                        if (p.description.isNotEmpty) ...[
+                          Text(
+                            p.description,
+                            style: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 10),
                         ],
-                      ),
-                      const SizedBox(height: 3),
-                      // Category chip
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
+
+                        // Metrics / Info Chips
+                        Row(
+                          children: [
+                            _infoChip(
+                              Icons.currency_rupee_rounded,
+                              '₹${p.price}',
+                              primaryGreen,
+                              lightGreen,
+                            ),
+                            const SizedBox(width: 8),
+                            _infoChip(
+                              Icons.inventory_2_rounded,
+                              p.isOutOfStock ? '0 stock' : p.stockDisplay,
+                              p.isOutOfStock
+                                  ? Colors.red.shade600
+                                  : const Color(0xFF0097A7),
+                              p.isOutOfStock
+                                  ? Colors.red.shade50
+                                  : const Color(0xFFE0F7FA),
+                            ),
+                          ],
                         ),
-                        decoration: BoxDecoration(
-                          color: lightGreen,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          p.categoryName,
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w700,
-                            color: primaryGreen,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      if (p.description.isNotEmpty)
-                        Text(
-                          p.description,
-                          style: TextStyle(
-                            color: Colors.grey.shade500,
-                            fontSize: 12,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          _infoChip(
-                            Icons.attach_money_rounded,
-                            '\$${p.price}',
-                            primaryGreen,
-                            const Color(0xFFE8F5E9),
-                          ),
-                          const SizedBox(width: 8),
-                          _infoChip(
-                            Icons.inventory_2_rounded,
-                            p.isOutOfStock ? 'Out of Stock' : p.stockDisplay,
-                            p.isOutOfStock ? Colors.red.shade600 : const Color(0xFF0097A7),
-                            p.isOutOfStock ? Colors.red.shade50 : const Color(0xFFE0F7FA),
-                          ),
-                        ],
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      style: IconButton.styleFrom(
-                        backgroundColor: lightGreen,
-                        padding: const EdgeInsets.all(8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      icon: Icon(
-                        Icons.edit_rounded,
-                        color: primaryGreen,
-                        size: 20,
-                      ),
-                      onPressed: () => _showEditProductDialog(p),
-                    ),
-                    const SizedBox(height: 8),
-                    IconButton(
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.red.shade50,
-                        padding: const EdgeInsets.all(8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      icon: Icon(
-                        Icons.delete_outline_rounded,
-                        color: Colors.red.shade600,
-                        size: 20,
-                      ),
-                      onPressed: () => _showDeleteConfirmationDialog(p),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildFallbackThumbnail() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [lightGreen, const Color(0xFFC8E6C9)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Icon(Icons.shopping_bag_rounded, color: primaryGreen, size: 32),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required Color color,
+    required Color bgColor,
+    required VoidCallback onPressed,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.all(7),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: color, size: 17),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStockBadge(ProductModel p) {
+    final bool isOut = p.isOutOfStock;
+    final Color txtColor = isOut ? Colors.red.shade700 : Colors.orange.shade700;
+    final Color bgColor = isOut ? Colors.red.shade50 : Colors.orange.shade50;
+    final IconData icon = isOut
+        ? Icons.error_outline_rounded
+        : Icons.warning_amber_rounded;
+    final String label = isOut ? 'Out of Stock' : 'Low Stock';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10, color: txtColor),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 9.5,
+              fontWeight: FontWeight.w800,
+              color: txtColor,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

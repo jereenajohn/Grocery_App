@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/shimmer_loading.dart';
 import 'package:grocery_app/services/api_service.dart';
 import '../../models/country_model.dart';
 
@@ -427,11 +428,9 @@ class _AddCountryPageState extends State<AddCountryPage> {
             ),
             const SizedBox(height: 16),
             isLoading
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: CircularProgressIndicator(color: primaryGreen),
-                    ),
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: ProductsListShimmer(itemCount: 4),
                   )
                 : countries.isEmpty
                     ? const Center(

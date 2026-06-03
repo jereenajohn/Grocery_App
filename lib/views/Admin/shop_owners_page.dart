@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/shimmer_loading.dart';
 import '../../services/api_service.dart';
 import '../../models/shop_approval_model.dart';
 
@@ -246,11 +247,9 @@ class _ShopOwnersPageState extends State<ShopOwnersPage> {
 
   Widget buildShopListSection() {
     if (_isLoadingShops) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 40),
-          child: CircularProgressIndicator(color: Color(0xFF1B8F3A)),
-        ),
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: ProductsListShimmer(itemCount: 4),
       );
     }
 

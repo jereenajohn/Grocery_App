@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/shimmer_loading.dart';
 import '../../models/product_model.dart';
 import '../../models/shop_model.dart';
 import '../../services/api_service.dart';
@@ -28,6 +29,22 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
   void initState() {
     super.initState();
     _loadProducts();
+    if (!widget.shop.isOpen) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'This store is currently closed. Ordering is disabled.',
+            ),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      });
+    }
   }
 
   Future<void> _loadProducts() async {
@@ -59,15 +76,42 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
         slivers: [
           _buildSliverAppBar(),
           if (_isLoading)
-            const SliverFillRemaining(
-              child: Center(child: CircularProgressIndicator()),
-            )
+            const ProductGridShimmer()
           else if (_error != null)
             SliverFillRemaining(child: _buildError())
           else if (_products.isEmpty)
             SliverFillRemaining(child: _buildEmpty())
-          else
+          else ...[
+            if (!widget.shop.isOpen)
+              SliverToBoxAdapter(
+                child: Container(
+                  margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.red.shade100),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.store_mall_directory_outlined, color: Colors.red.shade700),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'This store is currently offline. You can browse products, but ordering is disabled.',
+                          style: TextStyle(
+                            color: Colors.red.shade800,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             _buildProductGrid(),
+          ],
         ],
       ),
     );
@@ -322,7 +366,9 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
   Widget _buildProductCard(ProductModel product) {
     final bool lowStock = product.lowStockWarning;
 
-    return Container(
+    return Opacity(
+      opacity: widget.shop.isOpen ? 1.0 : 0.65,
+      child: Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -451,7 +497,37 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                             : primaryGreen,
                       ),
                     ),
-                    if (product.isOutOfStock)
+                    if (!widget.shop.isOpen)
+                      GestureDetector(
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text(
+                                'This store is closed and not accepting orders right now.',
+                              ),
+                              backgroundColor: Colors.grey.shade700,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          height: 28,
+                          width: 28,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.remove_shopping_cart_rounded,
+                            color: Colors.grey.shade600,
+                            size: 14,
+                          ),
+                        ),
+                      )
+                    else if (product.isOutOfStock)
                       Container(
                         height: 28,
                         width: 28,
@@ -468,44 +544,7 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
                     else
                       GestureDetector(
                         onTap: () async {
-                          try {
-                            await _apiService.addToCart(
-                              productId: product.id,
-                              quantity: 1,
-                            );
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Added "${product.name}" to cart!',
-                                  ),
-                                  backgroundColor: primaryGreen,
-                                  behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    e
-                                        .toString()
-                                        .replaceAll('Exception:', '')
-                                        .trim(),
-                                  ),
-                                  backgroundColor: Colors.red,
-                                  behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                              );
-                            }
-                          }
+                          await _handleAddToCart(product);
                         },
                         child: Container(
                           height: 28,
@@ -528,7 +567,144 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
           ),
         ],
       ),
-    );
+    ),);
+  }
+
+  Future<void> _handleAddToCart(ProductModel product) async {
+    try {
+      final cartShopId = await _apiService.getCartShopId();
+      final cartItems = await _apiService.getCart();
+
+      // If the cart has items and the shop ID doesn't match the current shop ID
+      if (cartItems.isNotEmpty && cartShopId != null && cartShopId != widget.shop.id) {
+        final currentShopName = await _apiService.getCartShopName();
+        if (!mounted) return;
+
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 28),
+                SizedBox(width: 8),
+                Text(
+                  'Replace Cart Items?',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            content: Text(
+              'Your cart already contains items from "${currentShopName ?? "another shop"}".\n\n'
+              'Do you want to clear your cart and add items from "${widget.shop.shop_name}" instead?',
+              style: const TextStyle(fontSize: 14),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryGreen,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text(
+                  'Replace',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        );
+
+        if (confirm != true) return;
+
+        // User confirmed to clear the cart and add the new item
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+
+        try {
+          await _apiService.clearCart();
+          await _apiService.addToCart(productId: product.id, quantity: 1);
+          await _apiService.setCartShopId(widget.shop.id);
+          await _apiService.setCartShopName(widget.shop.shop_name);
+          if (mounted) {
+            Navigator.pop(context); // Dismiss loading spinner
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Added "${product.name}" to cart!'),
+                backgroundColor: primaryGreen,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            Navigator.pop(context); // Dismiss loading spinner
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(e.toString().replaceAll('Exception:', '').trim()),
+                backgroundColor: Colors.red,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            );
+          }
+        }
+      } else {
+        // Safe to add directly
+        await _apiService.addToCart(productId: product.id, quantity: 1);
+        await _apiService.setCartShopId(widget.shop.id);
+        await _apiService.setCartShopName(widget.shop.shop_name);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Added "${product.name}" to cart!'),
+              backgroundColor: primaryGreen,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception:', '').trim()),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      }
+    }
   }
 
   Widget _productPlaceholder(String category) {

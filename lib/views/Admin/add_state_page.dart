@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/shimmer_loading.dart';
 
 import '../../models/country_model.dart';
 import '../../models/state_model.dart';
@@ -463,11 +464,9 @@ class _AddStatePageState extends State<AddStatePage> {
             ),
             const SizedBox(height: 16),
             isLoadingStates
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: CircularProgressIndicator(color: primaryGreen),
-                    ),
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: ProductsListShimmer(itemCount: 4),
                   )
                 : states.isEmpty
                     ? const Center(

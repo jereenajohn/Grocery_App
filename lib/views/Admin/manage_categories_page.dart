@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/shimmer_loading.dart';
 import '../../services/api_service.dart';
 import '../../models/category_model.dart';
 
@@ -299,11 +300,9 @@ class _ManageCategoriesPageState extends State<ManageCategoriesPage> {
 
   Widget buildCategoryList() {
     if (_isLoading) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 60),
-          child: CircularProgressIndicator(color: Color(0xFF1B8F3A)),
-        ),
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: ProductsListShimmer(itemCount: 4),
       );
     }
 

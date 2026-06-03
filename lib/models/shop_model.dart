@@ -22,6 +22,7 @@ class ShopModel {
   final String? productImage;
   final double? productPrice;
   final String createdAt;
+  final bool isOpen;
 
   ShopModel({
     required this.id,
@@ -45,6 +46,7 @@ class ShopModel {
     this.productImage,
     this.productPrice,
     required this.createdAt,
+    required this.isOpen,
   });
 
   String get fullName => '$firstName $lastName'.trim();
@@ -92,6 +94,7 @@ class ShopModel {
       productImage: productImg,
       productPrice: productPri,
       createdAt: json['created_at']?.toString() ?? '',
+      isOpen: json['is_open'] ?? json['is_active'] ?? true,
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../widgets/shimmer_loading.dart';
 import 'package:grocery_app/models/banner_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/address_model.dart';
@@ -12,7 +13,7 @@ import 'category_shops_page.dart';
 import 'shop_products_page.dart';
 import 'cart_page.dart';
 import 'all_shops_page.dart';
-
+import 'orders_page.dart';
 
 class UserHomePage extends StatefulWidget {
   const UserHomePage({super.key});
@@ -20,6 +21,7 @@ class UserHomePage extends StatefulWidget {
   @override
   State<UserHomePage> createState() => _UserHomePageState();
 }
+
 class _UserHomePageState extends State<UserHomePage> {
   final ApiService _apiService = ApiService();
   final ScrollController _scrollController = ScrollController();
@@ -37,6 +39,7 @@ class _UserHomePageState extends State<UserHomePage> {
 
   final PageController _promoPageController = PageController();
   Timer? _promoTimer;
+  Timer? _searchDebounceTimer;
   int _currentPromoPage = 0;
 
   final Color primaryGreen = const Color(0xFF1B8F3A);
@@ -59,10 +62,12 @@ class _UserHomePageState extends State<UserHomePage> {
   @override
   void dispose() {
     _promoTimer?.cancel();
+    _searchDebounceTimer?.cancel();
     _promoPageController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
+
   void _startPromoAutoScroll() {
     _promoTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!mounted) return;
@@ -126,10 +131,10 @@ class _UserHomePageState extends State<UserHomePage> {
     }
   }
 
-  Future<void> _loadShops() async {
+  Future<void> _loadShops({String? search}) async {
     setState(() => _shopsLoading = true);
     try {
-      final shops = await _apiService.getShops();
+      final shops = await _apiService.getShops(search: search);
       setState(() {
         _shops = shops;
         _shopsLoading = false;
@@ -159,7 +164,7 @@ class _UserHomePageState extends State<UserHomePage> {
     final lower = name.toLowerCase();
     final Map<String, Map<String, dynamic>> mapping = {
       'fruit': {
-        'icon': Icons.apple_rounded,
+        'icon': Icons.apple,
         'color': const Color(0xFFFFEBEE),
         'iconColor': const Color(0xFFEF5350),
       },
@@ -553,6 +558,15 @@ class _UserHomePageState extends State<UserHomePage> {
                 border: Border.all(color: Colors.green.shade50),
               ),
               child: TextField(
+                onChanged: (value) {
+                  _searchDebounceTimer?.cancel();
+                  _searchDebounceTimer = Timer(
+                    const Duration(milliseconds: 500),
+                    () {
+                      _loadShops(search: value.trim());
+                    },
+                  );
+                },
                 decoration: InputDecoration(
                   hintText: 'Search fresh foods, veggies...',
                   hintStyle: TextStyle(
@@ -608,9 +622,8 @@ class _UserHomePageState extends State<UserHomePage> {
                 SizedBox(
                   height: 16,
                   width: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: primaryGreen,
+                  child: ShimmerEffect(
+                    child: ShimmerBox(width: 50, height: 14, borderRadius: 6),
                   ),
                 )
               else
@@ -626,40 +639,7 @@ class _UserHomePageState extends State<UserHomePage> {
           ),
         ),
         if (_categoriesLoading)
-          SizedBox(
-            height: 104,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: 5,
-              itemBuilder: (context, index) {
-                return Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 6),
-                  child: Column(
-                    children: [
-                      Container(
-                        height: 64,
-                        width: 64,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                      const SizedBox(height: 7),
-                      Container(
-                        height: 10,
-                        width: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          )
+          const CategoryShimmer()
         else if (_categories.isEmpty)
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 18),
@@ -751,166 +731,135 @@ class _UserHomePageState extends State<UserHomePage> {
     );
   }
 
-Widget _buildPromoBanner() {
-  if (_bannersLoading) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(18, 18, 18, 0),
-      height: 148,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Center(
-        child: CircularProgressIndicator(color: primaryGreen),
-      ),
+  Widget _buildPromoBanner() {
+    if (_bannersLoading) {
+      return const BannerShimmer();
+    }
+
+    if (_banners.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      children: [
+        Container(
+          margin: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+          height: 148,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: PageView.builder(
+              controller: _promoPageController,
+              itemCount: _banners.length,
+              onPageChanged: (index) {
+                setState(() => _currentPromoPage = index);
+              },
+              itemBuilder: (context, index) {
+                final banner = _banners[index];
+
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.network(
+                      banner.image,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) {
+                        return Container(
+                          color: lightGreen,
+                          child: Icon(
+                            Icons.image_not_supported_rounded,
+                            color: primaryGreen,
+                            size: 45,
+                          ),
+                        );
+                      },
+                    ),
+
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.black.withOpacity(0.50),
+                            Colors.black.withOpacity(0.10),
+                          ],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ),
+                      ),
+                    ),
+
+                    Positioned(
+                      right: -20,
+                      bottom: -20,
+                      child: Icon(
+                        Icons.shopping_basket_rounded,
+                        size: 160,
+                        color: Colors.white.withOpacity(0.10),
+                      ),
+                    ),
+
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            banner.title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+
+                          const SizedBox(height: 4),
+
+                          Text(
+                            banner.description,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(_banners.length, (index) {
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              height: 8,
+              width: _currentPromoPage == index ? 24 : 8,
+              decoration: BoxDecoration(
+                color: _currentPromoPage == index
+                    ? primaryGreen
+                    : Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            );
+          }),
+        ),
+      ],
     );
   }
 
-  if (_banners.isEmpty) {
-    return const SizedBox.shrink();
-  }
-
-  return Column(
-    children: [
-      Container(
-        margin: const EdgeInsets.fromLTRB(18, 18, 18, 0),
-        height: 148,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: PageView.builder(
-            controller: _promoPageController,
-            itemCount: _banners.length,
-            onPageChanged: (index) {
-              setState(() => _currentPromoPage = index);
-            },
-            itemBuilder: (context, index) {
-              final banner = _banners[index];
-
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.network(
-                    banner.image,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) {
-                      return Container(
-                        color: lightGreen,
-                        child: Icon(
-                          Icons.image_not_supported_rounded,
-                          color: primaryGreen,
-                          size: 45,
-                        ),
-                      );
-                    },
-                  ),
-
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.black.withOpacity(0.50),
-                          Colors.black.withOpacity(0.10),
-                        ],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ),
-                    ),
-                  ),
-
-                  Positioned(
-                    right: -20,
-                    bottom: -20,
-                    child: Icon(
-                      Icons.shopping_basket_rounded,
-                      size: 160,
-                      color: Colors.white.withOpacity(0.10),
-                    ),
-                  ),
-
-                  Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.24),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Text(
-                            "OFFER",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 8),
-
-                        Text(
-                          banner.title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-
-                        const SizedBox(height: 4),
-
-                        Text(
-                          banner.description,
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-      ),
-
-      const SizedBox(height: 10),
-
-      Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(_banners.length, (index) {
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            height: 8,
-            width: _currentPromoPage == index ? 24 : 8,
-            decoration: BoxDecoration(
-              color: _currentPromoPage == index
-                  ? primaryGreen
-                  : Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          );
-        }),
-      ),
-    ],
-  );
-}
-Widget _buildShops() {
+  Widget _buildShops() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -927,9 +876,8 @@ Widget _buildShops() {
                 SizedBox(
                   height: 16,
                   width: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: primaryGreen,
+                  child: ShimmerEffect(
+                    child: ShimmerBox(width: 60, height: 14, borderRadius: 6),
                   ),
                 )
               else
@@ -945,11 +893,7 @@ Widget _buildShops() {
           ),
         ),
         if (_shopsLoading)
-          Container(
-            height: 160,
-            alignment: Alignment.center,
-            child: CircularProgressIndicator(color: primaryGreen),
-          )
+          const ShopsListShimmer(itemCount: 2)
         else if (_shops.isEmpty)
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 18),
@@ -996,36 +940,69 @@ Widget _buildShops() {
                       ),
                     );
                   },
-                  child: Container(
-                    width: 150,
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Cover Image Block
-                        Container(
-                          height: 110,
-                          width: 150,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            color: lightGreen,
-                          ),
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              // Image
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: shop.productImage != null
-                                    ? Image.network(
-                                        shop.productImage!,
-                                        fit: BoxFit.cover,
-                                        errorBuilder:
-                                            (context, error, stackTrace) =>
-                                                _buildCardPlaceholder(),
-                                      )
-                                    : _buildCardPlaceholder(),
-                              ),
+                  child: Opacity(
+                    opacity: shop.isOpen ? 1.0 : 0.65,
+                    child: Container(
+                      width: 150,
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Cover Image Block
+                          Container(
+                            height: 110,
+                            width: 150,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              color: lightGreen,
+                            ),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                // Image
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: shop.productImage != null
+                                      ? Image.network(
+                                          shop.productImage!,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) =>
+                                                  _buildCardPlaceholder(),
+                                        )
+                                      : _buildCardPlaceholder(),
+                                ),
+                                if (!shop.isOpen)
+                                  Positioned.fill(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.4),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Center(
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 5,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.withOpacity(0.85),
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: Colors.white, width: 1.0),
+                                          ),
+                                          child: const Text(
+                                            'CLOSED',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: 1.0,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                               // Bottom Gradient Overlay
                               Positioned.fill(
                                 child: ClipRRect(
@@ -1154,7 +1131,7 @@ Widget _buildShops() {
                         ),
                       ],
                     ),
-                  ),
+                  ),),
                 );
               },
             ),
@@ -1162,6 +1139,7 @@ Widget _buildShops() {
       ],
     );
   }
+
   Widget _buildCardPlaceholder() {
     return Container(
       decoration: BoxDecoration(
@@ -1185,8 +1163,8 @@ Widget _buildShops() {
     final List<Map<String, dynamic>> navItems = [
       {'icon': Icons.home_rounded, 'label': 'Home'},
       {'icon': Icons.storefront_rounded, 'label': 'Shops'},
+      {'icon': Icons.shopping_bag_rounded, 'label': 'Orders'},
       {'icon': Icons.settings_rounded, 'label': 'Settings'},
-      {'icon': Icons.logout_rounded, 'label': 'Logout'},
     ];
 
     return Container(
@@ -1232,12 +1210,15 @@ Widget _buildShops() {
                   });
                   return;
                 }
+
                 if (index == 2) {
-                  _showSettingsBottomSheet();
+                  setState(() {
+                    _activeNavIndex = index;
+                  });
                   return;
                 }
                 if (index == 3) {
-                  _logout();
+                  _showSettingsBottomSheet();
                   return;
                 }
               },
@@ -1323,7 +1304,11 @@ Widget _buildShops() {
                       color: lightGreen,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.settings_rounded, color: primaryGreen, size: 24),
+                    child: Icon(
+                      Icons.settings_rounded,
+                      color: primaryGreen,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Text(
@@ -1350,8 +1335,11 @@ Widget _buildShops() {
                       radius: 28,
                       backgroundColor: lightGreen,
                       child: Text(
-                        _userData['first_name'] != null && _userData['first_name'].toString().isNotEmpty
-                            ? _userData['first_name'].toString()[0].toUpperCase()
+                        _userData['first_name'] != null &&
+                                _userData['first_name'].toString().isNotEmpty
+                            ? _userData['first_name']
+                                  .toString()[0]
+                                  .toUpperCase()
                             : 'U',
                         style: TextStyle(
                           color: primaryGreen,
@@ -1366,7 +1354,8 @@ Widget _buildShops() {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${_userData['first_name'] ?? ''} ${_userData['last_name'] ?? ''}'.trim(),
+                            '${_userData['first_name'] ?? ''} ${_userData['last_name'] ?? ''}'
+                                .trim(),
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w900,
@@ -1451,11 +1440,7 @@ Widget _buildShops() {
                 color: (iconColor ?? primaryGreen).withOpacity(0.08),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                icon,
-                color: iconColor ?? primaryGreen,
-                size: 20,
-              ),
+              child: Icon(icon, color: iconColor ?? primaryGreen, size: 20),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -1496,13 +1481,15 @@ Widget _buildShops() {
     if (_isLoading) {
       return Scaffold(
         backgroundColor: background,
-        body: Center(child: CircularProgressIndicator(color: primaryGreen)),
+        body: SafeArea(child: const HomePageShimmer()),
       );
     }
 
     Widget bodyWidget;
     if (_activeNavIndex == 1) {
       bodyWidget = const AllShopsPage();
+    } else if (_activeNavIndex == 2) {
+      bodyWidget = const OrdersPage();
     } else {
       bodyWidget = SafeArea(
         child: SingleChildScrollView(
@@ -1529,4 +1516,3 @@ Widget _buildShops() {
     );
   }
 }
-

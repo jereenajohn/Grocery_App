@@ -16,6 +16,7 @@ import '../models/category_model.dart';
 import '../models/cart_item_model.dart';
 import '../models/payment_method_model.dart';
 import '../models/banner_model.dart';
+import '../models/order_model.dart';
 
 class ApiService {
   // ─── OTP ────────────────────────────────────────────────────
@@ -1385,11 +1386,18 @@ class ApiService {
 
   // ─── Shops ───────────────────────────────────────────────────
 
-  Future<List<ShopModel>> getShops() async {
+  Future<List<ShopModel>> getShops({String? search}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
-    final url = Uri.parse('${ApiConstants.api}api/grocery/shops/view/');
+    final queryParams = <String, String>{};
+    if (search != null && search.isNotEmpty) {
+      queryParams['search'] = search;
+    }
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/shops/view/',
+    ).replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
     print("GET SHOPS URL: $url");
 
     final response = await http.get(
@@ -1848,6 +1856,79 @@ class ApiService {
       throw Exception(errorMessage);
     }
   }
+
+  // ─── Cart Shop Context ───────────────────────────────────────
+
+  Future<int?> getCartShopId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('cart_shop_id');
+  }
+
+  Future<void> setCartShopId(int? shopId) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (shopId == null) {
+      await prefs.remove('cart_shop_id');
+    } else {
+      await prefs.setInt('cart_shop_id', shopId);
+    }
+  }
+
+  Future<String?> getCartShopName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('cart_shop_name');
+  }
+
+  Future<void> setCartShopName(String? shopName) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (shopName == null) {
+      await prefs.remove('cart_shop_name');
+    } else {
+      await prefs.setString('cart_shop_name', shopName);
+    }
+  }
+
+  Future<void> clearCart() async {
+    final items = await getCart();
+    for (var item in items) {
+      try {
+        await deleteCartItem(productId: item.product.id);
+      } catch (_) {
+        // Fallback to sending quantity 0 if delete fails
+        await addToCart(productId: item.product.id, quantity: 0);
+      }
+    }
+    await setCartShopId(null);
+    await setCartShopName(null);
+  }
+
+  Future<void> syncCartShopContext(List<CartItemModel> cartItems) async {
+    if (cartItems.isEmpty) {
+      await setCartShopId(null);
+      await setCartShopName(null);
+      return;
+    }
+
+    final currentShopId = await getCartShopId();
+    if (currentShopId != null) {
+      return; // Already synced
+    }
+
+    // Try to sync/detect
+    try {
+      final firstProductId = cartItems.first.product.id;
+      final shops = await getShops();
+      for (var shop in shops) {
+        final products = await getProductsByShop(shopId: shop.id);
+        if (products.any((p) => p.id == firstProductId)) {
+          await setCartShopId(shop.id);
+          await setCartShopName(shop.shop_name);
+          break;
+        }
+      }
+    } catch (e) {
+      print("Error syncing cart shop context: $e");
+    }
+  }
   // ─── Admin Payment Methods ────────────────────────────────────
 
   Future<List<PaymentMethodModel>> getPaymentMethods() async {
@@ -2297,4 +2378,505 @@ class ApiService {
           "Payment verification failed",
     );
   }
+
+  // ─── Booked Orders ──────────────────────────────────────────
+
+  Future<List<OrderModel>> getOrders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/orders/view/');
+    print("GET ORDERS URL: $url");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("GET ORDERS STATUS: ${response.statusCode}");
+    print("GET ORDERS BODY: ${response.body}");
+
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+      final List<dynamic> items = decoded is List
+          ? decoded
+          : (decoded['results'] ?? []);
+      return items.map((e) => OrderModel.fromJson(e)).toList();
+    } else {
+      final decoded = jsonDecode(response.body);
+      String errorMessage = "Failed to load orders";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage =
+            decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<OrderModel> getOrderDetail({required int orderId}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/orders/update/$orderId/',
+    );
+    print("GET ORDER DETAIL URL: $url");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("GET ORDER DETAIL STATUS: ${response.statusCode}");
+    print("GET ORDER DETAIL BODY: ${response.body}");
+
+    if (response.statusCode == 200) {
+      return OrderModel.fromJson(jsonDecode(response.body));
+    } else {
+      final decoded = jsonDecode(response.body);
+      String errorMessage = "Failed to load order details";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage =
+            decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  // ─── Shop Received Orders ────────────────────────────────────
+
+  Future<List<OrderModel>> getShopOrders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/shop/orders/view/');
+    print("GET SHOP ORDERS URL: $url");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("GET SHOP ORDERS STATUS: ${response.statusCode}");
+    print("GET SHOP ORDERS BODY: ${response.body}");
+
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+      final List<dynamic> items = decoded is List
+          ? decoded
+          : (decoded['results'] ?? []);
+      return items.map((e) => OrderModel.fromJson(e)).toList();
+    } else {
+      final decoded = jsonDecode(response.body);
+      String errorMessage = "Failed to load shop orders";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage =
+            decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<OrderModel> getShopOrderDetail({required int orderId}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/shop/orders/detail/view/$orderId/',
+    );
+    print("GET SHOP ORDER DETAIL URL: $url");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("GET SHOP ORDER DETAIL STATUS: ${response.statusCode}");
+    print("GET SHOP ORDER DETAIL BODY: ${response.body}");
+
+    if (response.statusCode == 200) {
+      return OrderModel.fromJson(jsonDecode(response.body));
+    } else {
+      final decoded = jsonDecode(response.body);
+      String errorMessage = "Failed to load shop order details";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage =
+            decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<Map<String, dynamic>> updateOrderPaymentStatus({
+    required int orderId,
+    required String status,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/orders/$orderId/payment/status/',
+    );
+    final body = {"seller_payment_status": status};
+
+    print("UPDATE PAYMENT STATUS URL: $url");
+    print("UPDATE PAYMENT STATUS BODY: $body");
+
+    final response = await http.patch(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(body),
+    );
+
+    print("UPDATE PAYMENT STATUS CODE: ${response.statusCode}");
+    print("UPDATE PAYMENT STATUS RESPONSE: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return decoded is Map<String, dynamic>
+          ? decoded
+          : {"seller_payment_status": status};
+    } else {
+      String errorMessage = "Failed to update payment status";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage =
+            decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<Map<String, dynamic>> updateShopOrderStatus({
+    required int orderId,
+    required String status,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/shop/orders/$orderId/status/',
+    );
+    final body = {"status": status};
+
+    print("UPDATE SHOP ORDER STATUS URL: $url");
+    print("UPDATE SHOP ORDER STATUS BODY: $body");
+
+    final response = await http.patch(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(body),
+    );
+
+    print("UPDATE SHOP ORDER STATUS CODE: ${response.statusCode}");
+    print("UPDATE SHOP ORDER STATUS RESPONSE: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return decoded is Map<String, dynamic> ? decoded : {"status": status};
+    } else {
+      String errorMessage = "Failed to update order status";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage =
+            decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<Map<String, dynamic>> toggleShopStatus(bool isOpen) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/shop/status/update/view/',
+    );
+    final body = {"is_open": isOpen};
+
+    print("TOGGLE SHOP STATUS URL: $url");
+    print("TOGGLE SHOP STATUS BODY: $body");
+
+    final response = await http.patch(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(body),
+    );
+
+    print("TOGGLE SHOP STATUS CODE: ${response.statusCode}");
+    print("TOGGLE SHOP STATUS RESPONSE: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return decoded is Map<String, dynamic> ? decoded : {};
+    } else {
+      String errorMessage = "Failed to toggle shop status";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage =
+            decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<Map<String, dynamic>?> getSellerBankDetails() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/seller/bank/details/view/');
+
+    print("GET SELLER BANK DETAILS URL: $url");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("GET SELLER BANK DETAILS CODE: ${response.statusCode}");
+    print("GET SELLER BANK DETAILS RESPONSE: ${response.body}");
+
+    if (response.statusCode == 404) {
+      return null;
+    }
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      if (decoded is Map<String, dynamic> && decoded['status'] == 'success') {
+        final data = decoded['data'];
+        if (data is Map<String, dynamic>) {
+          return data;
+        } else if (data is List && data.isNotEmpty) {
+          return data.first as Map<String, dynamic>;
+        }
+      }
+      return null;
+    } else {
+      String errorMessage = "Failed to load bank details";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage =
+            decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<Map<String, dynamic>> addSellerBankDetails({
+    required String accountHolderName,
+    required String bankName,
+    required String branchName,
+    required String accountNumber,
+    required String ifscCode,
+    required String upiId,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/seller/bank/details/view/');
+    final body = {
+      "account_holder_name": accountHolderName,
+      "bank_name": bankName,
+      "branch_name": branchName,
+      "account_number": accountNumber,
+      "ifsc_code": ifscCode,
+      "upi_id": upiId,
+    };
+
+    print("ADD SELLER BANK DETAILS URL: $url");
+    print("ADD SELLER BANK DETAILS BODY: $body");
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(body),
+    );
+
+    print("ADD SELLER BANK DETAILS CODE: ${response.statusCode}");
+    print("ADD SELLER BANK DETAILS RESPONSE: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return decoded is Map<String, dynamic> ? decoded : {};
+    } else {
+      String errorMessage = "Failed to add bank details";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage =
+            decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<Map<String, dynamic>> updateSellerBankDetails({
+    required int id,
+    required String accountHolderName,
+    required String bankName,
+    required String branchName,
+    required String accountNumber,
+    required String ifscCode,
+    required String upiId,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/seller/bank/details/update/$id/');
+    final body = {
+      "account_holder_name": accountHolderName,
+      "bank_name": bankName,
+      "branch_name": branchName,
+      "account_number": accountNumber,
+      "ifsc_code": ifscCode,
+      "upi_id": upiId,
+    };
+
+    print("UPDATE SELLER BANK DETAILS URL: $url");
+    print("UPDATE SELLER BANK DETAILS BODY: $body");
+
+    final response = await http.put(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(body),
+    );
+
+    print("UPDATE SELLER BANK DETAILS CODE: ${response.statusCode}");
+    print("UPDATE SELLER BANK DETAILS RESPONSE: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return decoded is Map<String, dynamic> ? decoded : {};
+    } else {
+      String errorMessage = "Failed to update bank details";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage =
+            decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<Map<String, dynamic>> deleteSellerBankDetails({required int id}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/seller/bank/details/update/$id/');
+
+    print("DELETE SELLER BANK DETAILS URL: $url");
+
+    final response = await http.delete(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("DELETE SELLER BANK DETAILS CODE: ${response.statusCode}");
+    print("DELETE SELLER BANK DETAILS RESPONSE: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 204) {
+      return decoded is Map<String, dynamic> ? decoded : {};
+    } else {
+      String errorMessage = "Failed to delete bank details";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage =
+            decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<Map<String, dynamic>> getShopDashboard(String targetDate) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/shop/dashboard/?target_date=$targetDate',
+    );
+
+    print("GET SHOP DASHBOARD URL: $url");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("GET SHOP DASHBOARD CODE: ${response.statusCode}");
+    print("GET SHOP DASHBOARD RESPONSE: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return decoded;
+    } else {
+      String errorMessage = "Failed to load dashboard data";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage =
+            decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
 }
+
