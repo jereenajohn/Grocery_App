@@ -2878,5 +2878,99 @@ class ApiService {
       throw Exception(errorMessage);
     }
   }
+
+  // ─── Admin Orders ──────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getAdminOrders({
+    int? page,
+    String? startDate,
+    String? endDate,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final queryParams = <String, String>{};
+    if (page != null) queryParams['page'] = page.toString();
+    if (startDate != null && startDate.isNotEmpty) queryParams['start_date'] = startDate;
+    if (endDate != null && endDate.isNotEmpty) queryParams['end_date'] = endDate;
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/admin/orders/view/',
+    ).replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+
+    print("GET ADMIN ORDERS URL: $url");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("GET ADMIN ORDERS STATUS: ${response.statusCode}");
+    print("GET ADMIN ORDERS BODY: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200) {
+      if (decoded is Map<String, dynamic>) {
+        final List resultsJson = decoded['results'] ?? [];
+        return {
+          'count': decoded['count'] ?? 0,
+          'next': decoded['next'],
+          'previous': decoded['previous'],
+          'results': List<OrderModel>.from(
+            resultsJson.map((item) => OrderModel.fromJson(item)),
+          ),
+        };
+      }
+      throw Exception("Unexpected response format");
+    } else {
+      String errorMessage = "Failed to load admin orders";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage =
+            decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<OrderModel> getAdminOrderDetail({required int orderId}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/admin/orders/detail/view/$orderId/',
+    );
+    print("GET ADMIN ORDER DETAIL URL: $url");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("GET ADMIN ORDER DETAIL STATUS: ${response.statusCode}");
+    print("GET ADMIN ORDER DETAIL BODY: ${response.body}");
+
+    if (response.statusCode == 200) {
+      return OrderModel.fromJson(jsonDecode(response.body));
+    } else {
+      final decoded = jsonDecode(response.body);
+      String errorMessage = "Failed to load admin order details";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage =
+            decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
 }
 

@@ -6,6 +6,9 @@ class OrderItemModel {
   final double quantity;
   final String quantityDisplay;
   final String price;
+  final int? sellerId;
+  final String? sellerPhone;
+  final String? shopName;
 
   OrderItemModel({
     required this.id,
@@ -13,6 +16,9 @@ class OrderItemModel {
     required this.quantity,
     required this.quantityDisplay,
     required this.price,
+    this.sellerId,
+    this.sellerPhone,
+    this.shopName,
   });
 
   factory OrderItemModel.fromJson(Map<String, dynamic> json) {
@@ -22,6 +28,9 @@ class OrderItemModel {
       quantity: (json['quantity'] as num?)?.toDouble() ?? 0.0,
       quantityDisplay: json['quantity_display'] ?? '',
       price: json['price']?.toString() ?? '0.00',
+      sellerId: json['seller_id'] as int?,
+      sellerPhone: json['seller_phone']?.toString(),
+      shopName: json['shop_name']?.toString(),
     );
   }
 }
@@ -46,6 +55,9 @@ class OrderModel {
   final String createdAt;
   final String updatedAt;
   final String? sellerPaymentStatus;
+  final int? customerId;
+  final String? customerPhone;
+  final String? customerName;
 
   OrderModel({
     required this.id,
@@ -67,6 +79,9 @@ class OrderModel {
     required this.createdAt,
     required this.updatedAt,
     this.sellerPaymentStatus,
+    this.customerId,
+    this.customerPhone,
+    this.customerName,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
@@ -95,6 +110,9 @@ class OrderModel {
       createdAt: json['created_at'] ?? '',
       updatedAt: json['updated_at'] ?? '',
       sellerPaymentStatus: json['seller_payment_status'],
+      customerId: json['customer_id'] as int?,
+      customerPhone: json['customer_phone']?.toString(),
+      customerName: json['customer_name']?.toString(),
     );
   }
 }
