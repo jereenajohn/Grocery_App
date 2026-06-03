@@ -987,8 +987,13 @@ class _UserHomePageState extends State<UserHomePage> {
                                           ),
                                           decoration: BoxDecoration(
                                             color: Colors.red.withOpacity(0.85),
-                                            borderRadius: BorderRadius.circular(8),
-                                            border: Border.all(color: Colors.white, width: 1.0),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.white,
+                                              width: 1.0,
+                                            ),
                                           ),
                                           child: const Text(
                                             'CLOSED',
@@ -1003,135 +1008,138 @@ class _UserHomePageState extends State<UserHomePage> {
                                       ),
                                     ),
                                   ),
-                              // Bottom Gradient Overlay
-                              Positioned.fill(
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [
-                                          Colors.transparent,
-                                          Colors.black.withOpacity(0.05),
-                                          Colors.black.withOpacity(0.85),
-                                        ],
-                                        begin: Alignment.topCenter,
-                                        end: Alignment.bottomCenter,
+                                // Bottom Gradient Overlay
+                                Positioned.fill(
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            Colors.transparent,
+                                            Colors.black.withOpacity(0.05),
+                                            Colors.black.withOpacity(0.85),
+                                          ],
+                                          begin: Alignment.topCenter,
+                                          end: Alignment.bottomCenter,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              // Favorite Heart Icon
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.all(5),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.2),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.favorite_border_rounded,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
-                                ),
-                              ),
-                              // Price Tag Overlay
-                              if (shop.productPrice != null)
+                                // Favorite Heart Icon
                                 Positioned(
-                                  bottom: 8,
-                                  left: 10,
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        'ITEMS',
-                                        style: TextStyle(
-                                          color: Colors.white.withOpacity(0.9),
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w900,
-                                          letterSpacing: 0.5,
-                                        ),
-                                      ),
-                                      Text(
-                                        'AT ₹${shop.productPrice!.toStringAsFixed(0)}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w900,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        // Shop details below the image
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 2),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                shop.shop_name,
-                                style: const TextStyle(
-                                  fontSize: 14.5,
-                                  fontWeight: FontWeight.w900,
-                                  color: Color(0xFF1E1E1E),
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 3),
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(2),
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF1B8F3A),
+                                  top: 8,
+                                  right: 8,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(5),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.2),
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(
-                                      Icons.star_rounded,
+                                      Icons.favorite_border_rounded,
                                       color: Colors.white,
-                                      size: 10,
+                                      size: 16,
                                     ),
                                   ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '4.5 • 25-30 mins',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.grey.shade800,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Grocery • ${shop.districtName}',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey.shade500,
-                                  fontWeight: FontWeight.w600,
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
+                                // Price Tag Overlay
+                                if (shop.productPrice != null)
+                                  Positioned(
+                                    bottom: 8,
+                                    left: 10,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          'ITEMS',
+                                          style: TextStyle(
+                                            color: Colors.white.withOpacity(
+                                              0.9,
+                                            ),
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                        Text(
+                                          'AT ₹${shop.productPrice!.toStringAsFixed(0)}',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 8),
+                          // Shop details below the image
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 2),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  shop.shop_name,
+                                  style: const TextStyle(
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w900,
+                                    color: Color(0xFF1E1E1E),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 3),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(2),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFF1B8F3A),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.star_rounded,
+                                        color: Colors.white,
+                                        size: 10,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '4.5',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.grey.shade800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Grocery • ${shop.districtName}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade500,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),),
+                  ),
                 );
               },
             ),
