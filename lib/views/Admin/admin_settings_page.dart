@@ -4,12 +4,59 @@ import 'package:grocery_app/views/Admin/add_district_page.dart';
 import 'package:grocery_app/views/Admin/manage_banners_page.dart';
 import 'add_state_page.dart';
 import 'manage_payment_methods_page.dart';
+import '../../services/api_service.dart';
+import '../request_otp_page.dart';
 
 class AdminSettingsPage extends StatelessWidget {
   const AdminSettingsPage({super.key});
 
   final Color primaryGreen = const Color(0xFF1B8F3A);
   final Color lightGreen = const Color(0xFFEAF8EE);
+
+  Future<void> _logout(BuildContext context) async {
+    final apiService = ApiService();
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Row(
+          children: [
+            Icon(Icons.logout_rounded, color: Colors.red),
+            SizedBox(width: 10),
+            Text('Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Text('Are you sure you want to log out of the admin console?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await apiService.clearSavedUserData();
+      if (!context.mounted) return;
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const RequestOtpPage()),
+        (route) => false,
+      );
+    }
+  }
 
   Widget menuTile({
     required BuildContext context,
@@ -161,6 +208,49 @@ class AdminSettingsPage extends StatelessWidget {
                       subtitle: 'Manage home page banners',
                       icon: Icons.image_rounded,
                       page: const ManageBannersPage(),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.red.shade50),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.red.withOpacity(0.04),
+                            blurRadius: 18,
+                            offset: const Offset(0, 7),
+                          ),
+                        ],
+                      ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.red.shade50,
+                          child: const Icon(Icons.logout_rounded, color: Colors.red),
+                        ),
+                        title: const Text(
+                          'Logout',
+                          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Colors.red),
+                        ),
+                        subtitle: Text(
+                          'Exit admin console',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        trailing: Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 17,
+                          color: Colors.red.shade300,
+                        ),
+                        onTap: () => _logout(context),
+                      ),
                     ),
                   ],
                 ),
