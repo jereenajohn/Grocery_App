@@ -50,8 +50,12 @@ class _CategoryShopsPageState extends State<CategoryShopsPage> {
             shopId: shop.id,
             categoryId: widget.category.id,
           );
-          final List<ProductModel> products = List<ProductModel>.from(result['results'] ?? []);
-          final hasCategoryProduct = products.any((p) => p.category == widget.category.id);
+          final List<ProductModel> products = List<ProductModel>.from(
+            result['results'] ?? [],
+          );
+          final hasCategoryProduct = products.any(
+            (p) => p.category == widget.category.id,
+          );
           if (hasCategoryProduct) {
             return shop;
           }
@@ -311,12 +315,15 @@ class _CategoryShopsPageState extends State<CategoryShopsPage> {
                   children: [
                     // Image
                     ClipRRect(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(24),
+                      ),
                       child: shop.productImage != null
                           ? Image.network(
                               shop.productImage!,
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => _buildCoverPlaceholder(),
+                              errorBuilder: (context, error, stackTrace) =>
+                                  _buildCoverPlaceholder(),
                             )
                           : _buildCoverPlaceholder(),
                     ),
@@ -338,7 +345,10 @@ class _CategoryShopsPageState extends State<CategoryShopsPage> {
                               decoration: BoxDecoration(
                                 color: Colors.red.withOpacity(0.85),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.white, width: 1.5),
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 1.5,
+                                ),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withOpacity(0.3),
@@ -360,172 +370,177 @@ class _CategoryShopsPageState extends State<CategoryShopsPage> {
                           ),
                         ),
                       ),
-                  // Dark Gradient Overlay
-                  Positioned.fill(
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withOpacity(0.05),
-                              Colors.black.withOpacity(0.85),
-                            ],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
+                    // Dark Gradient Overlay
+                    Positioned.fill(
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(24),
+                        ),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withOpacity(0.05),
+                                Colors.black.withOpacity(0.85),
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  // Favorite Heart Icon
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.favorite_border_rounded,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                    ),
-                  ),
-                  // Price Tag Overlay
-                  if (shop.productPrice != null)
+                    // Favorite Heart Icon
                     Positioned(
-                      bottom: 10,
-                      left: 14,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'ITEMS',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          Text(
-                            'AT ₹${shop.productPrice!.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ],
+                      top: 10,
+                      right: 10,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.favorite_border_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                       ),
                     ),
-                ],
-              ),
-            ),
-            // Shop Details below the Cover Image
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          shop.shop_name,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF1E1E1E),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
+                    // Price Tag Overlay
+                    if (shop.productPrice != null)
+                      Positioned(
+                        bottom: 10,
+                        left: 14,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(2),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF1B8F3A),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.star_rounded,
-                                color: Colors.white,
-                                size: 10,
+                            Text(
+                              'ITEMS',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.9),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.5,
                               ),
                             ),
-                            const SizedBox(width: 4),
                             Text(
-                              '4.5 • 25-30 mins',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.grey.shade800,
+                              'AT ₹${shop.productPrice!.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 3),
-                        Text(
-                          'Grocery • ${shop.districtName}, ${shop.stateName}',
-                          style: TextStyle(
-                            color: Colors.grey.shade500,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
+                      ),
+                  ],
+                ),
+              ),
+              // Shop Details below the Cover Image
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            shop.shop_name,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF1E1E1E),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF1B8F3A),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.star_rounded,
+                                  color: Colors.white,
+                                  size: 10,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '4.5',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.grey.shade800,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Grocery • ${shop.districtName}, ${shop.stateName}',
+                            style: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isApproved
+                                ? const Color(0xFFE8F5E9)
+                                : const Color(0xFFFFF3E0),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            isApproved ? 'Open' : 'Pending',
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                              color: isApproved
+                                  ? primaryGreen
+                                  : Colors.orange.shade700,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: primaryGreen,
+                          size: 15,
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isApproved
-                              ? const Color(0xFFE8F5E9)
-                              : const Color(0xFFFFF3E0),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          isApproved ? 'Open' : 'Pending',
-                          style: TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w800,
-                            color: isApproved
-                                ? primaryGreen
-                                : Colors.orange.shade700,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        color: primaryGreen,
-                        size: 15,
-                      ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),),
+      ),
     );
   }
 
