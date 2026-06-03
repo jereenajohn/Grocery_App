@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../widgets/shimmer_loading.dart';
+import 'package:grocery_app/constants/api_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/cart_item_model.dart';
 import '../../models/address_model.dart';
@@ -8,7 +10,6 @@ import '../../models/state_model.dart';
 import '../../models/district_model.dart';
 import '../../services/api_service.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
-import '../../constants/api_constants.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -142,6 +143,7 @@ class _CartPageState extends State<CartPage> {
         _cartItems = items;
         _isLoading = false;
       });
+      await _apiService.syncCartShopContext(items);
     } catch (e) {
       setState(() {
         _error = e.toString().replaceFirst('Exception: ', '');
@@ -167,6 +169,7 @@ class _CartPageState extends State<CartPage> {
         _cartItems = items;
         _isLoading = false;
       });
+      await _apiService.syncCartShopContext(items);
     } catch (e) {
       setState(() => _isLoading = false);
       _showSnackBar(e.toString().replaceFirst('Exception: ', ''), Colors.red);
@@ -182,6 +185,7 @@ class _CartPageState extends State<CartPage> {
         _cartItems = items;
         _isLoading = false;
       });
+      await _apiService.syncCartShopContext(items);
       _showSnackBar('Removed "${item.product.name}" from cart', primaryGreen);
     } catch (e) {
       // Fallback: If deleteCartItem endpoint fails, try sending quantity 0
@@ -192,6 +196,7 @@ class _CartPageState extends State<CartPage> {
           _cartItems = items;
           _isLoading = false;
         });
+        await _apiService.syncCartShopContext(items);
         _showSnackBar('Removed "${item.product.name}" from cart', primaryGreen);
       } catch (e2) {
         setState(() => _isLoading = false);
@@ -271,7 +276,10 @@ class _CartPageState extends State<CartPage> {
             _buildHeader(),
             Expanded(
               child: _isLoading && _cartItems.isEmpty
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: CartItemsShimmer(),
+                    )
                   : _error != null
                   ? _buildErrorView()
                   : _cartItems.isEmpty
@@ -552,7 +560,7 @@ class _CartPageState extends State<CartPage> {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      'Price: \$${item.product.price} / ${item.product.unit}',
+                      'Price: ₹${item.product.price} / ${item.product.unit}',
                       style: TextStyle(
                         fontSize: 11.5,
                         color: Colors.grey.shade500,
@@ -582,7 +590,7 @@ class _CartPageState extends State<CartPage> {
                     ],
                     const SizedBox(height: 8),
                     Text(
-                      '\$${item.totalPrice}',
+                      '₹${item.totalPrice}',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w900,
@@ -1057,7 +1065,7 @@ class _CartPageState extends State<CartPage> {
                 style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
               ),
               Text(
-                '\$${_subtotal.toStringAsFixed(2)}',
+                '₹${_subtotal.toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
@@ -1074,7 +1082,7 @@ class _CartPageState extends State<CartPage> {
                 style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
               ),
               Text(
-                '\$${_deliveryFee.toStringAsFixed(2)}',
+                '₹${_deliveryFee.toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
@@ -1091,7 +1099,7 @@ class _CartPageState extends State<CartPage> {
                 style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
               ),
               Text(
-                '\$${_tax.toStringAsFixed(2)}',
+                '₹${_tax.toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
@@ -1110,7 +1118,7 @@ class _CartPageState extends State<CartPage> {
                 style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
               ),
               Text(
-                '\$${_grandTotal.toStringAsFixed(2)}',
+                '₹${_grandTotal.toStringAsFixed(2)}',
                 style: TextStyle(
                   color: hasOutOfStockItems
                       ? Colors.grey.shade500
@@ -1347,6 +1355,8 @@ class _CartPageState extends State<CartPage> {
   }
 
   void _showSuccessDialog() {
+    _apiService.setCartShopId(null);
+    _apiService.setCartShopName(null);
     showDialog(
       context: context,
       barrierDismissible: false,

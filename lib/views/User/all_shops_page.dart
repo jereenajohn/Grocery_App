@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/shimmer_loading.dart';
 import '../../models/shop_model.dart';
 import '../../services/api_service.dart';
 import 'shop_products_page.dart';
@@ -87,10 +88,7 @@ class _AllShopsPageState extends State<AllShopsPage> {
             _buildSliverAppBar(),
             _buildSearchBox(),
             if (_isLoading)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(child: CircularProgressIndicator()),
-              )
+              const ShopsListShimmer(itemCount: 4, isSliver: true)
             else if (_error != null)
               SliverFillRemaining(hasScrollBody: false, child: _buildError())
             else if (_filteredShops.isEmpty)
@@ -296,36 +294,38 @@ class _AllShopsPageState extends State<AllShopsPage> {
           MaterialPageRoute(builder: (_) => ShopProductsPage(shop: shop)),
         );
       },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.green.shade50.withOpacity(0.5)),
-          boxShadow: [
-            BoxShadow(
-              color: primaryGreen.withOpacity(0.04),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Cover Image Block
-            SizedBox(
-              height: 140,
-              width: double.infinity,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // Image
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(24),
-                    ),
-                    child: shop.productImage != null
+      child: Opacity(
+        opacity: shop.isOpen ? 1.0 : 0.65,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.green.shade50.withOpacity(0.5)),
+            boxShadow: [
+              BoxShadow(
+                color: primaryGreen.withOpacity(0.04),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Cover Image Block
+              SizedBox(
+                height: 140,
+                width: double.infinity,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Image
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(24),
+                      ),
+                      child: shop.productImage != null
                         ? Image.network(
                             shop.productImage!,
                             fit: BoxFit.cover,
@@ -333,7 +333,47 @@ class _AllShopsPageState extends State<AllShopsPage> {
                                 _buildCoverPlaceholder(),
                           )
                         : _buildCoverPlaceholder(),
-                  ),
+                    ),
+                    if (!shop.isOpen)
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.4),
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(24),
+                            ),
+                          ),
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withOpacity(0.85),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.white, width: 1.5),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: const Text(
+                                'CLOSED',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                   // Bottom Gradient Overlay
                   Positioned.fill(
                     child: ClipRRect(
@@ -498,7 +538,7 @@ class _AllShopsPageState extends State<AllShopsPage> {
             ),
           ],
         ),
-      ),
+      ),),
     );
   }
 

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import '../widgets/shimmer_loading.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../models/banner_model.dart';
@@ -454,8 +455,8 @@ class _ManageBannersPageState extends State<ManageBannersPage> {
   Widget buildBannerList() {
     if (isLoading) {
       return const Padding(
-        padding: EdgeInsets.all(30),
-        child: Center(child: CircularProgressIndicator()),
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: ShopsListShimmer(itemCount: 2),
       );
     }
 

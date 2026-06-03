@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/shimmer_loading.dart';
 import '../../models/payment_method_model.dart';
 import '../../services/api_service.dart';
 
@@ -474,7 +475,10 @@ class _ManagePaymentMethodsPageState extends State<ManagePaymentMethodsPage> {
             _buildHeader(),
             Expanded(
               child: _isLoading && _paymentMethods.isEmpty
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: ProductsListShimmer(itemCount: 3),
+                    )
                   : _error != null
                       ? Center(child: Text(_error!, style: const TextStyle(color: Colors.redAccent)))
                       : _paymentMethods.isEmpty
