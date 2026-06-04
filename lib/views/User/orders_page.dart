@@ -16,6 +16,7 @@ class _OrdersPageState extends State<OrdersPage> {
   List<OrderModel> _orders = [];
   bool _isLoading = true;
   String? _error;
+  final Map<int, Map<String, dynamic>?> _orderRatings = {};
 
   final Color primaryGreen = const Color(0xFF1B8F3A);
   final Color darkGreen = const Color(0xFF0F5F28);
@@ -33,6 +34,7 @@ class _OrdersPageState extends State<OrdersPage> {
     setState(() {
       _isLoading = true;
       _error = null;
+      _orderRatings.clear();
     });
 
     try {
@@ -42,6 +44,7 @@ class _OrdersPageState extends State<OrdersPage> {
         _orders = orders;
         _isLoading = false;
       });
+      _fetchRatingsForCompletedOrders(orders);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -351,6 +354,13 @@ class _OrdersPageState extends State<OrdersPage> {
                       ),
                     ],
                   ),
+                  if (order.status.toLowerCase() == 'completed') ...[
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Divider(height: 1, thickness: 1, color: Color(0xFFE8F5E9)),
+                    ),
+                    _buildRatingSection(order),
+                  ],
                 ],
               ),
             ),
@@ -437,6 +447,328 @@ class _OrdersPageState extends State<OrdersPage> {
           statusBadge: _statusBadge,
         );
       },
+    );
+  }
+
+  Future<void> _fetchRatingsForCompletedOrders(List<OrderModel> orders) async {
+    final completedOrders = orders.where((o) => o.status.toLowerCase() == 'completed').toList();
+    for (var order in completedOrders) {
+      try {
+        final ratingData = await _apiService.getOrderRating(orderId: order.id);
+        if (mounted) {
+          setState(() {
+            _orderRatings[order.id] = ratingData ?? {"rating": 0, "review": ""};
+          });
+        }
+      } catch (_) {
+        if (mounted) {
+          setState(() {
+            _orderRatings[order.id] = {"rating": 0, "review": ""};
+          });
+        }
+      }
+    }
+  }
+
+  Widget _buildRatingSection(OrderModel order) {
+    if (!_orderRatings.containsKey(order.id)) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'RATING & REVIEW',
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.grey.shade400,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(
+            width: 14,
+            height: 14,
+            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF1B8F3A)),
+          ),
+        ],
+      );
+    }
+
+    final ratingInfo = _orderRatings[order.id] ?? {"rating": 0, "review": ""};
+    final int currentRating = ratingInfo['rating'] ?? 0;
+    final String currentReview = ratingInfo['review'] ?? '';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  currentRating > 0 ? 'YOUR RATING' : 'RATE THIS ORDER',
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    color: Colors.grey.shade400,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: List.generate(5, (index) {
+                    final starIndex = index + 1;
+                    final isHighlighted = starIndex <= currentRating;
+                    return GestureDetector(
+                      onTap: () => _showReviewDialog(order, starIndex),
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 4),
+                        child: Icon(
+                          isHighlighted ? Icons.star_rounded : Icons.star_outline_rounded,
+                          color: isHighlighted ? const Color(0xFFFFB300) : Colors.grey.shade300,
+                          size: 24,
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              ],
+            ),
+            if (currentRating > 0)
+              TextButton.icon(
+                onPressed: () => _showReviewDialog(order, currentRating),
+                icon: const Icon(Icons.edit_note_rounded, size: 18, color: Color(0xFF1B8F3A)),
+                label: const Text(
+                  'Edit Review',
+                  style: TextStyle(
+                    color: Color(0xFF1B8F3A),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  backgroundColor: const Color(0xFFEAF8EE),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+          ],
+        ),
+        if (currentReview.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade100),
+            ),
+            child: Text(
+              '"$currentReview"',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+                fontStyle: FontStyle.italic,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  void _showReviewDialog(OrderModel order, int initialRating) {
+    final ratingInfo = _orderRatings[order.id] ?? {"rating": 0, "review": ""};
+    final String currentReview = ratingInfo['review'] ?? '';
+    final bool isUpdate = (ratingInfo['rating'] ?? 0) > 0;
+
+    int selectedRating = initialRating;
+    final TextEditingController reviewController = TextEditingController(text: currentReview);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              title: Row(
+                children: [
+                  Icon(
+                    isUpdate ? Icons.rate_review_rounded : Icons.star_rounded,
+                    color: primaryGreen,
+                    size: 26,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    isUpdate ? 'Edit Your Review' : 'Rate Your Order',
+                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'How was your experience with order #${order.orderNo}?',
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 13, fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 16),
+                    Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: List.generate(5, (index) {
+                          final starIndex = index + 1;
+                          final isHighlighted = starIndex <= selectedRating;
+                          return GestureDetector(
+                            onTap: () {
+                              setDialogState(() {
+                                selectedRating = starIndex;
+                              });
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              child: Icon(
+                                isHighlighted ? Icons.star_rounded : Icons.star_outline_rounded,
+                                color: isHighlighted ? const Color(0xFFFFB300) : Colors.grey.shade300,
+                                size: 38,
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'ADD A REVIEW (OPTIONAL)',
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        color: Colors.grey.shade500,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: reviewController,
+                      maxLines: 3,
+                      keyboardType: TextInputType.multiline,
+                      decoration: InputDecoration(
+                        hintText: 'Share details of your experience...',
+                        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                        contentPadding: const EdgeInsets.all(14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(color: Colors.grey.shade200),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(color: Colors.grey.shade200),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(color: primaryGreen, width: 1.5),
+                        ),
+                      ),
+                      style: const TextStyle(fontSize: 13.5),
+                    ),
+                  ],
+                ),
+              ),
+              actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              actions: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          Navigator.pop(context); // Close review dialog
+                          _showLoadingSpinner();
+
+                          final navigator = Navigator.of(context);
+
+                          try {
+                            final result = await _apiService.submitOrderRating(
+                              orderId: order.id,
+                              rating: selectedRating,
+                              review: reviewController.text.trim(),
+                              isUpdate: isUpdate,
+                            );
+
+                            if (mounted) {
+                              navigator.pop(); // Dismiss loading
+                              setState(() {
+                                _orderRatings[order.id] = result;
+                              });
+                              _showSnackBar('Rating submitted successfully!', primaryGreen);
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              navigator.pop(); // Dismiss loading
+                              _showSnackBar(
+                                e.toString().replaceAll('Exception:', '').trim(),
+                                Colors.redAccent,
+                              );
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryGreen,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        child: const Text(
+                          'Submit',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showLoadingSpinner() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF1B8F3A)),
+      ),
+    );
+  }
+
+  void _showSnackBar(String message, Color bgColor) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: bgColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
     );
   }
 }

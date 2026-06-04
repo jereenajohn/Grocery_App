@@ -1,5 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:grocery_app/models/country_model.dart';
+import 'package:grocery_app/models/state_model.dart';
+import 'package:grocery_app/models/district_model.dart';
 import '../widgets/shimmer_loading.dart';
 import 'package:grocery_app/models/banner_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -88,10 +93,21 @@ class _UserHomePageState extends State<UserHomePage> {
         _userData = data;
         _isLoading = false;
       });
+
+      // Pull latest profile from server
+      await _apiService.getProfile();
+      final updatedData = await _apiService.getSavedUserData();
+      if (mounted) {
+        setState(() {
+          _userData = updatedData;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -1407,6 +1423,16 @@ class _UserHomePageState extends State<UserHomePage> {
               ),
               const SizedBox(height: 12),
               _buildSettingsActionTile(
+                icon: Icons.person_outline_rounded,
+                title: 'Edit Profile',
+                subtitle: 'Update your personal details',
+                onTap: () {
+                  Navigator.pop(context);
+                  _showEditProfileBottomSheet();
+                },
+              ),
+              const SizedBox(height: 12),
+              _buildSettingsActionTile(
                 icon: Icons.logout_rounded,
                 title: 'Logout',
                 subtitle: 'Sign out of your account securely',
@@ -1422,6 +1448,737 @@ class _UserHomePageState extends State<UserHomePage> {
       },
     );
   }
+
+  void _showEditProfileBottomSheet() {
+    final formKey = GlobalKey<FormState>();
+    final firstNameController = TextEditingController(text: _userData['first_name'] ?? '');
+    final lastNameController = TextEditingController(text: _userData['last_name'] ?? '');
+    final emailController = TextEditingController(text: _userData['email'] ?? '');
+    
+    File? selectedImage;
+    final picker = ImagePicker();
+
+    bool isLoadingLocations = true;
+    bool locationsLoaded = false;
+    List<CountryModel> countriesList = [];
+    List<StateModel> statesList = [];
+    List<DistrictModel> districtsList = [];
+    CountryModel? selectedCountry;
+    StateModel? selectedState;
+    DistrictModel? selectedDistrict;
+
+    bool isSaving = false;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            Future<void> loadInitialLocations() async {
+              try {
+                final res = await _apiService.getCountries();
+                countriesList = List<CountryModel>.from(res['results'] ?? []);
+                
+                final countryVal = _userData['country'];
+                final countryNameVal = _userData['country_name'];
+                if ((countryVal != null && countryVal != 0) || (countryNameVal != null && countryNameVal.toString().isNotEmpty)) {
+                  for (var c in countriesList) {
+                    if ((countryVal != null && countryVal != 0 && c.id == countryVal) ||
+                        (countryNameVal != null && c.name.trim().toLowerCase() == countryNameVal.toString().trim().toLowerCase())) {
+                      selectedCountry = c;
+                      break;
+                    }
+                  }
+                }
+                
+                if (selectedCountry != null) {
+                  statesList = await _apiService.getStatesByCountry(countryId: selectedCountry!.id);
+                  final stateVal = _userData['state'];
+                  final stateNameVal = _userData['state_name'];
+                  if ((stateVal != null && stateVal != 0) || (stateNameVal != null && stateNameVal.toString().isNotEmpty)) {
+                    for (var s in statesList) {
+                      if ((stateVal != null && stateVal != 0 && s.id == stateVal) ||
+                          (stateNameVal != null && s.name.trim().toLowerCase() == stateNameVal.toString().trim().toLowerCase())) {
+                        selectedState = s;
+                        break;
+                      }
+                    }
+                  }
+                }
+                
+                if (selectedState != null) {
+                  districtsList = await _apiService.getDistrictsByState(stateId: selectedState!.id);
+                  final districtVal = _userData['district'];
+                  final districtNameVal = _userData['district_name'];
+                  if ((districtVal != null && districtVal != 0) || (districtNameVal != null && districtNameVal.toString().isNotEmpty)) {
+                    for (var d in districtsList) {
+                      if ((districtVal != null && districtVal != 0 && d.id == districtVal) ||
+                          (districtNameVal != null && d.name.trim().toLowerCase() == districtNameVal.toString().trim().toLowerCase())) {
+                        selectedDistrict = d;
+                        break;
+                      }
+                    }
+                  }
+                }
+              } catch (e) {
+                print("Error loading locations: $e");
+              } finally {
+                setModalState(() {
+                  isLoadingLocations = false;
+                });
+              }
+            }
+
+            Future<void> onCountryChanged(CountryModel? country) async {
+              setModalState(() {
+                selectedCountry = country;
+                selectedState = null;
+                selectedDistrict = null;
+                statesList = [];
+                districtsList = [];
+                isLoadingLocations = true;
+              });
+              if (country != null) {
+                try {
+                  final list = await _apiService.getStatesByCountry(countryId: country.id);
+                  setModalState(() {
+                    statesList = list;
+                    isLoadingLocations = false;
+                  });
+                } catch (_) {
+                  setModalState(() {
+                    isLoadingLocations = false;
+                  });
+                }
+              } else {
+                setModalState(() {
+                  isLoadingLocations = false;
+                });
+              }
+            }
+
+            Future<void> onStateChanged(StateModel? state) async {
+              setModalState(() {
+                selectedState = state;
+                selectedDistrict = null;
+                districtsList = [];
+                isLoadingLocations = true;
+              });
+              if (state != null) {
+                try {
+                  final list = await _apiService.getDistrictsByState(stateId: state.id);
+                  setModalState(() {
+                    districtsList = list;
+                    isLoadingLocations = false;
+                  });
+                } catch (_) {
+                  setModalState(() {
+                    isLoadingLocations = false;
+                  });
+                }
+              } else {
+                setModalState(() {
+                  isLoadingLocations = false;
+                });
+              }
+            }
+
+            Future<void> pickNewImage() async {
+              showModalBottomSheet(
+                context: context,
+                backgroundColor: Colors.transparent,
+                builder: (BuildContext sheetCtx) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 10,
+                          offset: const Offset(0, -4),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Select Avatar Source',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade800,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            GestureDetector(
+                              onTap: () async {
+                                Navigator.pop(sheetCtx);
+                                try {
+                                  final XFile? image = await picker.pickImage(
+                                    source: ImageSource.camera,
+                                    maxWidth: 512,
+                                    maxHeight: 512,
+                                    imageQuality: 85,
+                                  );
+                                  if (image != null) {
+                                    setModalState(() {
+                                      selectedImage = File(image.path);
+                                    });
+                                  }
+                                } catch (e) {
+                                  print("Error picking image from camera: $e");
+                                }
+                              },
+                              child: Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: lightGreen,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(Icons.camera_alt_rounded, color: primaryGreen, size: 30),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'Camera',
+                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () async {
+                                Navigator.pop(sheetCtx);
+                                try {
+                                  final XFile? image = await picker.pickImage(
+                                    source: ImageSource.gallery,
+                                    maxWidth: 512,
+                                    maxHeight: 512,
+                                    imageQuality: 85,
+                                  );
+                                  if (image != null) {
+                                    setModalState(() {
+                                      selectedImage = File(image.path);
+                                    });
+                                  }
+                                } catch (e) {
+                                  print("Error picking image from gallery: $e");
+                                }
+                              },
+                              child: Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: lightGreen,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(Icons.photo_library_rounded, color: primaryGreen, size: 30),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'Gallery',
+                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            }
+
+            if (!locationsLoaded) {
+              locationsLoaded = true;
+              loadInitialLocations();
+            }
+
+            return AnimatedPadding(
+              padding: MediaQuery.of(context).viewInsets,
+              duration: const Duration(milliseconds: 100),
+              curve: Curves.decelerate,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: background,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(32),
+                    topRight: Radius.circular(32),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 20,
+                      offset: const Offset(0, -6),
+                    ),
+                  ],
+                ),
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.85,
+                ),
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+                child: Form(
+                  key: formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 40,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: lightGreen,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.edit_rounded,
+                                color: primaryGreen,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Text(
+                              'Edit Profile',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.grey.shade800,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        // Profile Image Selector
+                        Center(
+                          child: Stack(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: primaryGreen, width: 3),
+                                ),
+                                child: CircleAvatar(
+                                  radius: 50,
+                                  backgroundColor: Colors.white,
+                                  backgroundImage: selectedImage != null
+                                      ? FileImage(selectedImage!) as ImageProvider
+                                      : (_userData['profile_picture'] != null && _userData['profile_picture'].toString().isNotEmpty
+                                          ? NetworkImage(_userData['profile_picture']) as ImageProvider
+                                          : null),
+                                  child: selectedImage == null && (_userData['profile_picture'] == null || _userData['profile_picture'].toString().isEmpty)
+                                      ? Icon(Icons.person_rounded, size: 50, color: Colors.grey.shade400)
+                                      : null,
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: GestureDetector(
+                                  onTap: pickNewImage,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: primaryGreen,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.camera_alt_rounded,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'First Name',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: firstNameController,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          decoration: InputDecoration(
+                            hintText: 'Enter your first name',
+                            fillColor: Colors.white,
+                            filled: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: Colors.green.shade100),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: Colors.green.shade100),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: primaryGreen, width: 1.5),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'First name is required';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Last Name',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: lastNameController,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          decoration: InputDecoration(
+                            hintText: 'Enter your last name',
+                            fillColor: Colors.white,
+                            filled: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: Colors.green.shade100),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: Colors.green.shade100),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: primaryGreen, width: 1.5),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Last name is required';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Email Address',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          decoration: InputDecoration(
+                            hintText: 'Enter your email address',
+                            fillColor: Colors.white,
+                            filled: true,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: Colors.green.shade100),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: Colors.green.shade100),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: primaryGreen, width: 1.5),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Email is required';
+                            }
+                            if (!value.contains('@')) {
+                              return 'Enter a valid email address';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        // Dropdown fields for country, state, district
+                        Text(
+                          'Country',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        isLoadingLocations
+                            ? const LinearProgressIndicator()
+                            : DropdownButtonFormField<int>(
+                                value: selectedCountry?.id,
+                                dropdownColor: Colors.white,
+                                isExpanded: true,
+                                style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black87),
+                                decoration: InputDecoration(
+                                  fillColor: Colors.white,
+                                  filled: true,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(color: Colors.green.shade100),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(color: Colors.green.shade100),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(color: primaryGreen, width: 1.5),
+                                  ),
+                                ),
+                                items: countriesList.map((c) {
+                                  return DropdownMenuItem<int>(
+                                    value: c.id,
+                                    child: Text(c.name),
+                                  );
+                                }).toList(),
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    final c = countriesList.firstWhere((x) => x.id == val);
+                                    onCountryChanged(c);
+                                  }
+                                },
+                                validator: (value) => value == null ? 'Country is required' : null,
+                              ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'State',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        isLoadingLocations
+                            ? const LinearProgressIndicator()
+                            : DropdownButtonFormField<int>(
+                                value: selectedState?.id,
+                                dropdownColor: Colors.white,
+                                isExpanded: true,
+                                style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black87),
+                                decoration: InputDecoration(
+                                  fillColor: Colors.white,
+                                  filled: true,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(color: Colors.green.shade100),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(color: Colors.green.shade100),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(color: primaryGreen, width: 1.5),
+                                  ),
+                                ),
+                                items: statesList.map((s) {
+                                  return DropdownMenuItem<int>(
+                                    value: s.id,
+                                    child: Text(s.name),
+                                  );
+                                }).toList(),
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    final s = statesList.firstWhere((x) => x.id == val);
+                                    onStateChanged(s);
+                                  }
+                                },
+                                validator: (value) => value == null ? 'State is required' : null,
+                              ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'District',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        isLoadingLocations
+                            ? const LinearProgressIndicator()
+                            : DropdownButtonFormField<int>(
+                                value: selectedDistrict?.id,
+                                dropdownColor: Colors.white,
+                                isExpanded: true,
+                                style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black87),
+                                decoration: InputDecoration(
+                                  fillColor: Colors.white,
+                                  filled: true,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(color: Colors.green.shade100),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(color: Colors.green.shade100),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(color: primaryGreen, width: 1.5),
+                                  ),
+                                ),
+                                items: districtsList.map((d) {
+                                  return DropdownMenuItem<int>(
+                                    value: d.id,
+                                    child: Text(d.name),
+                                  );
+                                }).toList(),
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    final d = districtsList.firstWhere((x) => x.id == val);
+                                    setModalState(() {
+                                      selectedDistrict = d;
+                                    });
+                                  }
+                                },
+                                validator: (value) => value == null ? 'District is required' : null,
+                              ),
+                        const SizedBox(height: 32),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: ElevatedButton(
+                            onPressed: isSaving
+                                ? null
+                                : () async {
+                                    if (formKey.currentState!.validate()) {
+                                      setModalState(() {
+                                        isSaving = true;
+                                      });
+                                      try {
+                                        final userId = _userData['user_id'] ?? 0;
+                                        await _apiService.updateProfile(
+                                          userId: userId,
+                                          firstName: firstNameController.text.trim(),
+                                          lastName: lastNameController.text.trim(),
+                                          email: emailController.text.trim(),
+                                          country: selectedCountry?.id,
+                                          state: selectedState?.id,
+                                          district: selectedDistrict?.id,
+                                          profilePicture: selectedImage,
+                                        );
+                                        await _loadUserData();
+                                        if (mounted) {
+                                          Navigator.pop(context);
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: const Text('Profile updated successfully!'),
+                                              backgroundColor: primaryGreen,
+                                              behavior: SnackBarBehavior.floating,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        setModalState(() {
+                                          isSaving = false;
+                                        });
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(e.toString().replaceAll('Exception: ', '')),
+                                              backgroundColor: Colors.redAccent,
+                                              behavior: SnackBarBehavior.floating,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    }
+                                  },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryGreen,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 2,
+                          ),
+                          child: isSaving
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2.5,
+                                  ),
+                                )
+                              : const Text(
+                                  'Save Changes',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
 
   Widget _buildSettingsActionTile({
     required IconData icon,
