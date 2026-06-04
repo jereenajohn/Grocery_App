@@ -217,11 +217,18 @@ class ApiService {
       'last_name': prefs.getString('last_name') ?? '',
       'email': prefs.getString('email') ?? '',
       'user_type': prefs.getString('user_type') ?? '',
+      'shop_name': prefs.getString('shop_name') ?? '',
       'approval_status': prefs.getString('approval_status') ?? '',
       'profile_picture': prefs.getString('profile_picture') ?? '',
       'country': prefs.getInt('country') ?? 0,
       'state': prefs.getInt('state') ?? 0,
       'district': prefs.getInt('district') ?? 0,
+      'country_name': prefs.getString('country_name') ?? '',
+      'state_name': prefs.getString('state_name') ?? '',
+      'district_name': prefs.getString('district_name') ?? '',
+      'latitude': prefs.getString('latitude') ?? '',
+      'longitude': prefs.getString('longitude') ?? '',
+      'is_open': prefs.getBool('is_open') ?? true,
     };
   }
 
@@ -231,6 +238,7 @@ class ApiService {
 
     // 1. Try hitting the standard profile view endpoint
     final url = Uri.parse('${ApiConstants.api}api/grocery/profile/');
+    print("GET PROFILE API CALL TO: $url");
     try {
       final response = await http
           .get(
@@ -240,19 +248,49 @@ class ApiService {
               "Authorization": "Bearer $token",
             },
           )
-          .timeout(const Duration(seconds: 3));
+          .timeout(const Duration(seconds: 10));
+
+      print("GET PROFILE STATUS CODE: ${response.statusCode}");
+      print("GET PROFILE RESPONSE BODY: ${response.body}");
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         if (decoded is Map<String, dynamic>) {
           final status = decoded['approval_status']?.toString() ?? 'pending';
           await prefs.setString('approval_status', status);
+          if (decoded['first_name'] != null) await prefs.setString('first_name', decoded['first_name'].toString());
+          if (decoded['last_name'] != null) await prefs.setString('last_name', decoded['last_name'].toString());
+          if (decoded['email'] != null) await prefs.setString('email', decoded['email'].toString());
+          if (decoded['shop_name'] != null) await prefs.setString('shop_name', decoded['shop_name'].toString());
+          if (decoded['latitude'] != null) await prefs.setString('latitude', decoded['latitude'].toString());
+          if (decoded['longitude'] != null) await prefs.setString('longitude', decoded['longitude'].toString());
+          if (decoded['is_open'] != null) await prefs.setBool('is_open', decoded['is_open'] == true);
+          if (decoded['profile_picture'] != null) await prefs.setString('profile_picture', decoded['profile_picture'].toString());
+          
+          if (decoded['country'] != null) {
+            await prefs.setString('country_name', decoded['country'].toString());
+            final parsedCountry = int.tryParse(decoded['country'].toString());
+            if (parsedCountry != null) await prefs.setInt('country', parsedCountry);
+          }
+          if (decoded['state'] != null) {
+            await prefs.setString('state_name', decoded['state'].toString());
+            final parsedState = int.tryParse(decoded['state'].toString());
+            if (parsedState != null) await prefs.setInt('state', parsedState);
+          }
+          if (decoded['district'] != null) {
+            await prefs.setString('district_name', decoded['district'].toString());
+            final parsedDistrict = int.tryParse(decoded['district'].toString());
+            if (parsedDistrict != null) await prefs.setInt('district', parsedDistrict);
+          }
           return decoded;
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      print("GET PROFILE standard API exception: $e");
+    }
 
     // 2. Fallback: Search the approvals list for matching phone
+    print("GET PROFILE fallback 1: Searching shop approvals list");
     try {
       final approvalsData = await getShopApprovals(page: 1);
       final List results = approvalsData['results'] ?? [];
@@ -261,36 +299,207 @@ class ApiService {
       for (var item in results) {
         if (item is ShopApprovalModel && item.phone == myPhone) {
           final status = item.approvalStatus;
+          print("GET PROFILE fallback 1: Found matching approval shop with status $status");
           await prefs.setString('approval_status', status);
+          await prefs.setString('first_name', item.firstName);
+          await prefs.setString('last_name', item.lastName);
+          await prefs.setString('email', item.email);
+          if (item.profilePicture != null) {
+            await prefs.setString('profile_picture', item.profilePicture!);
+          }
+          await prefs.setString('country_name', item.country);
+          await prefs.setString('state_name', item.state);
+          await prefs.setString('district_name', item.district);
+          if (item.latitude != null) await prefs.setString('latitude', item.latitude!);
+          if (item.longitude != null) await prefs.setString('longitude', item.longitude!);
+
           return {
             'approval_status': status,
-            'user': {
-              'id': item.id,
-              'phone': item.phone,
-              'name': item.firstName,
-              'email': item.email,
-              'user_type': 'shop',
-              'approval_status': status,
-            },
+            'id': item.id,
+            'phone': item.phone,
+            'first_name': item.firstName,
+            'last_name': item.lastName,
+            'email': item.email,
+            'user_type': 'shop',
+            'country_name': item.country,
+            'state_name': item.state,
+            'district_name': item.district,
+            'latitude': item.latitude,
+            'longitude': item.longitude,
+            'profile_picture': item.profilePicture,
           };
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      print("GET PROFILE fallback 1 exception: $e");
+    }
 
     // 3. Fallback: Check getShops approved store list
+    print("GET PROFILE fallback 2: Searching approved shops list");
     try {
       final shops = await getShops();
       final myPhone = prefs.getString('phone') ?? '';
-      final isApproved = shops.any((s) => s.phone == myPhone);
-      if (isApproved) {
-        await prefs.setString('approval_status', 'approved');
-        return {'approval_status': 'approved'};
+      ShopModel? matchingShop;
+      for (var s in shops) {
+        if (s.phone == myPhone) {
+          matchingShop = s;
+          break;
+        }
       }
-    } catch (_) {}
+      if (matchingShop != null) {
+        print("GET PROFILE fallback 2: Found matching approved shop ${matchingShop.shop_name}");
+        await prefs.setString('approval_status', 'approved');
+        await prefs.setString('first_name', matchingShop.firstName);
+        await prefs.setString('last_name', matchingShop.lastName);
+        await prefs.setString('email', matchingShop.email);
+        await prefs.setString('shop_name', matchingShop.shop_name);
+        if (matchingShop.profilePicture != null) {
+          await prefs.setString('profile_picture', matchingShop.profilePicture!);
+        }
+        await prefs.setString('country_name', matchingShop.countryName);
+        await prefs.setString('state_name', matchingShop.stateName);
+        await prefs.setString('district_name', matchingShop.districtName);
+        await prefs.setInt('country', matchingShop.country);
+        await prefs.setInt('state', matchingShop.state);
+        await prefs.setInt('district', matchingShop.district);
+        if (matchingShop.latitude != null) await prefs.setString('latitude', matchingShop.latitude!);
+        if (matchingShop.longitude != null) await prefs.setString('longitude', matchingShop.longitude!);
+        await prefs.setBool('is_open', matchingShop.isOpen);
+
+        return {
+          'approval_status': 'approved',
+          'id': matchingShop.id,
+          'phone': matchingShop.phone,
+          'first_name': matchingShop.firstName,
+          'last_name': matchingShop.lastName,
+          'email': matchingShop.email,
+          'shop_name': matchingShop.shop_name,
+          'user_type': 'shop',
+          'country': matchingShop.country,
+          'state': matchingShop.state,
+          'district': matchingShop.district,
+          'latitude': matchingShop.latitude,
+          'longitude': matchingShop.longitude,
+          'is_open': matchingShop.isOpen,
+          'profile_picture': matchingShop.profilePicture,
+        };
+      }
+    } catch (e) {
+      print("GET PROFILE fallback 2 exception: $e");
+    }
 
     // 4. Default: Return saved local profile status
     final savedStatus = prefs.getString('approval_status') ?? 'pending';
+    print("GET PROFILE fallback default: Returning status $savedStatus");
     return {'approval_status': savedStatus};
+  }
+
+  Future<Map<String, dynamic>> updateProfile({
+    required int userId,
+    required String firstName,
+    required String lastName,
+    required String email,
+    String? shopName,
+    int? country,
+    int? state,
+    int? district,
+    String? latitude,
+    String? longitude,
+    bool? isOpen,
+    File? profilePicture,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+    final url = Uri.parse('${ApiConstants.api}api/grocery/profile/update/$userId/');
+
+    final request = http.MultipartRequest('PUT', url);
+    request.headers['Authorization'] = 'Bearer $token';
+
+    request.fields['first_name'] = firstName;
+    request.fields['last_name'] = lastName;
+    request.fields['email'] = email;
+    if (shopName != null && shopName.isNotEmpty) {
+      request.fields['shop_name'] = shopName;
+    }
+    if (country != null) {
+      request.fields['country'] = country.toString();
+    }
+    if (state != null) {
+      request.fields['state'] = state.toString();
+    }
+    if (district != null) {
+      request.fields['district'] = district.toString();
+    }
+    if (latitude != null) {
+      request.fields['latitude'] = latitude;
+    }
+    if (longitude != null) {
+      request.fields['longitude'] = longitude;
+    }
+    if (isOpen != null) {
+      request.fields['is_open'] = isOpen.toString();
+    }
+    if (profilePicture != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath('profile_picture', profilePicture.path),
+      );
+    }
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      await prefs.setString('first_name', decoded['first_name']?.toString() ?? firstName);
+      await prefs.setString('last_name', decoded['last_name']?.toString() ?? lastName);
+      await prefs.setString('email', decoded['email']?.toString() ?? email);
+      if (decoded['shop_name'] != null) {
+        await prefs.setString('shop_name', decoded['shop_name']?.toString() ?? '');
+      }
+      if (decoded['country'] != null) {
+        final parsedCountry = int.tryParse(decoded['country'].toString());
+        if (parsedCountry != null) {
+          await prefs.setInt('country', parsedCountry);
+        } else if (country != null) {
+          await prefs.setInt('country', country);
+        }
+      }
+      if (decoded['state'] != null) {
+        final parsedState = int.tryParse(decoded['state'].toString());
+        if (parsedState != null) {
+          await prefs.setInt('state', parsedState);
+        } else if (state != null) {
+          await prefs.setInt('state', state);
+        }
+      }
+      if (decoded['district'] != null) {
+        final parsedDistrict = int.tryParse(decoded['district'].toString());
+        if (parsedDistrict != null) {
+          await prefs.setInt('district', parsedDistrict);
+        } else if (district != null) {
+          await prefs.setInt('district', district);
+        }
+      }
+      if (decoded['latitude'] != null) {
+        await prefs.setString('latitude', decoded['latitude']?.toString() ?? '');
+      }
+      if (decoded['longitude'] != null) {
+        await prefs.setString('longitude', decoded['longitude']?.toString() ?? '');
+      }
+      if (decoded['is_open'] != null) {
+        await prefs.setBool('is_open', decoded['is_open'] == true);
+      }
+      if (decoded['profile_picture'] != null) {
+        await prefs.setString('profile_picture', decoded['profile_picture'].toString());
+      }
+      return decoded;
+    } else {
+      String errorMessage = "Failed to update profile";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ?? decoded['message']?.toString() ?? decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
   }
 
   Future<void> clearSavedUserData() async {
@@ -1929,6 +2138,80 @@ class ApiService {
       print("Error syncing cart shop context: $e");
     }
   }
+
+  // ─── Order Ratings ───────────────────────────────────────────
+
+  Future<Map<String, dynamic>?> getOrderRating({required int orderId}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+    final url = Uri.parse('${ApiConstants.api}api/grocery/orders/$orderId/rating/');
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else if (response.statusCode == 404) {
+      return null;
+    } else {
+      final decoded = jsonDecode(response.body);
+      String errorMessage = "Failed to load rating";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ?? decoded['message']?.toString() ?? decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<Map<String, dynamic>> submitOrderRating({
+    required int orderId,
+    required int rating,
+    required String review,
+    required bool isUpdate,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+    final url = Uri.parse('${ApiConstants.api}api/grocery/orders/$orderId/rating/');
+    final body = {
+      "rating": rating,
+      "review": review,
+    };
+
+    final response = isUpdate
+        ? await http.put(
+            url,
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer $token",
+            },
+            body: jsonEncode(body),
+          )
+        : await http.post(
+            url,
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer $token",
+            },
+            body: jsonEncode(body),
+          );
+
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return decoded;
+    } else {
+      String errorMessage = "Failed to submit rating";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ?? decoded['message']?.toString() ?? decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
   // ─── Admin Payment Methods ────────────────────────────────────
 
   Future<List<PaymentMethodModel>> getPaymentMethods() async {
