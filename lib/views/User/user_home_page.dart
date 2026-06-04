@@ -897,12 +897,32 @@ class _UserHomePageState extends State<UserHomePage> {
                   ),
                 )
               else
-                Text(
-                  '${_shops.length} shops',
-                  style: TextStyle(
-                    color: primaryGreen,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13,
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AllShopsPage(),
+                      ),
+                    );
+                  },
+                  child: Row(
+                    children: [
+                      Text(
+                        'View All',
+                        style: TextStyle(
+                          color: primaryGreen,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13.5,
+                        ),
+                      ),
+                      const SizedBox(width: 2),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: primaryGreen,
+                        size: 11,
+                      ),
+                    ],
                   ),
                 ),
             ],
@@ -943,8 +963,82 @@ class _UserHomePageState extends State<UserHomePage> {
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _shops.length,
+              itemCount: _shops.length > 6 ? 7 : (_shops.isEmpty ? 0 : _shops.length + 1),
               itemBuilder: (context, index) {
+                final showViewAll = (_shops.length > 6 && index == 6) || (_shops.length <= 6 && index == _shops.length);
+
+                if (showViewAll) {
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AllShopsPage(),
+                        ),
+                      );
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          height: 110,
+                          width: 150,
+                          margin: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.green.shade50),
+                            boxShadow: [
+                              BoxShadow(
+                                color: primaryGreen.withOpacity(0.04),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: lightGreen,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.arrow_forward_rounded,
+                                  color: primaryGreen,
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'View All',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w900,
+                                  color: darkGreen,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _shops.length > 6
+                                    ? '${_shops.length - 6} more shops'
+                                    : 'Explore all',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey.shade500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
                 final shop = _shops[index];
 
                 return GestureDetector(

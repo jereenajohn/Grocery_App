@@ -4,6 +4,7 @@ class ShopApprovalModel {
   final String email;
   final String firstName;
   final String lastName;
+  final String shopName;
   final String? profilePicture;
   final String userType;
   final String approvalStatus;
@@ -21,6 +22,7 @@ class ShopApprovalModel {
     required this.email,
     required this.firstName,
     required this.lastName,
+    required this.shopName,
     this.profilePicture,
     required this.userType,
     required this.approvalStatus,
@@ -40,6 +42,7 @@ class ShopApprovalModel {
       email: json['email']?.toString() ?? '',
       firstName: json['first_name']?.toString() ?? '',
       lastName: json['last_name']?.toString() ?? '',
+      shopName: json['shop_name']?.toString() ?? '',
       profilePicture: json['profile_picture']?.toString(),
       userType: json['user_type']?.toString() ?? 'shop',
       approvalStatus: json['approval_status']?.toString() ?? 'pending',

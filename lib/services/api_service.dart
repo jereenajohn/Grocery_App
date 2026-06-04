@@ -1639,6 +1639,71 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> getShopsPaginated({String? search, int? page}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final queryParams = <String, String>{};
+    if (search != null && search.isNotEmpty) {
+      queryParams['search'] = search;
+    }
+    if (page != null) {
+      queryParams['page'] = page.toString();
+    }
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/shops/view/',
+    ).replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+    print("GET SHOPS PAGINATED URL: $url");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("GET SHOPS PAGINATED STATUS: ${response.statusCode}");
+    print("GET SHOPS PAGINATED BODY: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200) {
+      if (decoded is Map<String, dynamic>) {
+        final List resultsJson = decoded['results'] ?? [];
+        return {
+          'count': decoded['count'] ?? 0,
+          'next': decoded['next'],
+          'previous': decoded['previous'],
+          'results': List<ShopModel>.from(
+            resultsJson.map((item) => ShopModel.fromJson(item)),
+          ),
+        };
+      } else if (decoded is List) {
+        return {
+          'count': decoded.length,
+          'next': null,
+          'previous': null,
+          'results': List<ShopModel>.from(
+            decoded.map((item) => ShopModel.fromJson(item)),
+          ),
+        };
+      }
+      throw Exception("Unexpected shops response format");
+    } else {
+      String errorMessage = "Failed to load shops";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage =
+            decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+
   Future<List<ProductModel>> getProductsByShop({required int shopId}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';

@@ -329,7 +329,7 @@ class _ShopOwnersPageState extends State<ShopOwnersPage> {
                           children: [
                             Expanded(
                               child: Text(
-                                fullName,
+                                shop.shopName,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w900,
                                   fontSize: 14,
