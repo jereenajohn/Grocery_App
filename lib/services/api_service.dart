@@ -3190,12 +3190,12 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> getShopDashboard(String targetDate) async {
+  Future<Map<String, dynamic>> getShopDashboard(String startDate, String endDate) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
     final url = Uri.parse(
-      '${ApiConstants.api}api/grocery/shop/dashboard/?target_date=$targetDate',
+      '${ApiConstants.api}api/grocery/shop/dashboard/?start_date=$startDate&end_date=$endDate',
     );
 
     print("GET SHOP DASHBOARD URL: $url");

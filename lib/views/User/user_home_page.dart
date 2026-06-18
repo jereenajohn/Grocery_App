@@ -14,6 +14,7 @@ import '../../models/shop_model.dart';
 import '../../services/api_service.dart';
 import '../address_page.dart';
 import '../request_otp_page.dart';
+import 'map_address_picker_page.dart';
 import 'category_shops_page.dart';
 import 'shop_products_page.dart';
 import 'cart_page.dart';
@@ -510,11 +511,13 @@ class _UserHomePageState extends State<UserHomePage> {
             ),
             child: InkWell(
               onTap: () async {
-                await Navigator.push(
+                final result = await Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const AddressPage()),
+                  MaterialPageRoute(builder: (_) => const MapAddressPickerPage()),
                 );
-                _loadAddresses();
+                if (result == true) {
+                  _loadAddresses();
+                }
               },
               borderRadius: BorderRadius.circular(18),
               child: Row(
@@ -528,7 +531,7 @@ class _UserHomePageState extends State<UserHomePage> {
                   Expanded(
                     child: Text(
                       _primaryAddress != null
-                          ? 'Deliver to: ${_primaryAddress!.city}, ${_primaryAddress!.stateName}'
+                          ? 'Deliver to: ${_primaryAddress!.address}, ${_primaryAddress!.city}'
                           : 'Tap to add a delivery address',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.92),
