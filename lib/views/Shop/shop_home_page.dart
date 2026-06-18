@@ -45,7 +45,8 @@ class _ShopHomePageState extends State<ShopHomePage> {
   Map<String, dynamic>? _dashboardData;
   bool _dashboardLoading = true;
   String? _dashboardError;
-  DateTime _selectedDashboardDate = DateTime(2026, 6, 2);
+  DateTime _selectedStartDate = DateTime(2026, 6, 2);
+  DateTime _selectedEndDate = DateTime(2026, 6, 2);
 
   final Color primaryGreen = const Color(0xFF1B8F3A);
   final Color darkGreen = const Color(0xFF0F5F28);
@@ -214,8 +215,9 @@ class _ShopHomePageState extends State<ShopHomePage> {
       _dashboardError = null;
     });
     try {
-      final dateStr = _formatDate(_selectedDashboardDate);
-      final res = await _apiService.getShopDashboard(dateStr);
+      final startStr = _formatDate(_selectedStartDate);
+      final endStr = _formatDate(_selectedEndDate);
+      final res = await _apiService.getShopDashboard(startStr, endStr);
       if (!mounted) return;
       setState(() {
         if (res['success'] == true) {
@@ -3263,14 +3265,22 @@ class _ShopHomePageState extends State<ShopHomePage> {
   }
 
   Widget _buildDateFilterSection() {
-    final formattedDateStr =
-        "${_selectedDashboardDate.day.toString().padLeft(2, '0')} ${_getMonthName(_selectedDashboardDate.month)} ${_selectedDashboardDate.year}";
+    final String formattedDateStr;
+    if (_selectedStartDate.year == _selectedEndDate.year &&
+        _selectedStartDate.month == _selectedEndDate.month &&
+        _selectedStartDate.day == _selectedEndDate.day) {
+      formattedDateStr =
+          "${_selectedStartDate.day.toString().padLeft(2, '0')} ${_getMonthName(_selectedStartDate.month)} ${_selectedStartDate.year}";
+    } else {
+      formattedDateStr =
+          "${_selectedStartDate.day.toString().padLeft(2, '0')} ${_getMonthName(_selectedStartDate.month)} - ${_selectedEndDate.day.toString().padLeft(2, '0')} ${_getMonthName(_selectedEndDate.month)} ${_selectedEndDate.year}";
+    }
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         const Text(
-          'Target Date Metrics',
+          'Date Range Metrics',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w900,
@@ -3322,9 +3332,12 @@ class _ShopHomePageState extends State<ShopHomePage> {
   }
 
   Future<void> _selectDate() async {
-    final DateTime? picked = await showDatePicker(
+    final DateTimeRange? picked = await showDateRangePicker(
       context: context,
-      initialDate: _selectedDashboardDate,
+      initialDateRange: DateTimeRange(
+        start: _selectedStartDate,
+        end: _selectedEndDate,
+      ),
       firstDate: DateTime(2025, 1, 1),
       lastDate: DateTime(2030, 12, 31),
       builder: (context, child) {
@@ -3346,11 +3359,14 @@ class _ShopHomePageState extends State<ShopHomePage> {
         );
       },
     );
-    if (picked != null && picked != _selectedDashboardDate) {
-      setState(() {
-        _selectedDashboardDate = picked;
-      });
-      _loadDashboardData();
+    if (picked != null) {
+      if (picked.start != _selectedStartDate || picked.end != _selectedEndDate) {
+        setState(() {
+          _selectedStartDate = picked.start;
+          _selectedEndDate = picked.end;
+        });
+        _loadDashboardData();
+      }
     }
   }
 
