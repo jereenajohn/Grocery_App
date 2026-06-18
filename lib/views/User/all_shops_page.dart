@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../widgets/shimmer_loading.dart';
 import '../../models/shop_model.dart';
@@ -20,59 +21,119 @@ class _AllShopsPageState extends State<AllShopsPage> {
   final Color goldAccent = const Color(0xFFFFB300);
   final Color background = const Color(0xFFF7FFF9);
 
+  final ScrollController _scrollController = ScrollController();
+  Timer? _debounce;
+
   List<ShopModel> _allShops = [];
-  List<ShopModel> _filteredShops = [];
   bool _isLoading = true;
+  bool _isLoadingMore = false;
   String? _error;
+  int _currentPage = 1;
+  bool _hasNextPage = true;
+  int _totalCount = 0;
+
   final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _loadShops();
+    _scrollController.addListener(_onScroll);
+    _loadShops(isRefresh: true);
     _searchController.addListener(_onSearchChanged);
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
-  Future<void> _loadShops() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      if (!_isLoadingMore && _hasNextPage && _error == null) {
+        _loadMoreShops();
+      }
+    }
+  }
+
+  void _checkAndLoadMore() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients &&
+          _scrollController.position.maxScrollExtent == 0 &&
+          _hasNextPage &&
+          !_isLoadingMore &&
+          !_isLoading &&
+          _error == null) {
+        _loadMoreShops();
+      }
     });
-    try {
-      final shops = await _apiService.getShops();
+  }
+
+  Future<void> _loadShops({bool isRefresh = false}) async {
+    if (isRefresh) {
       setState(() {
-        _allShops = shops;
-        _filteredShops = shops;
-        _isLoading = false;
+        _currentPage = 1;
+        _hasNextPage = true;
+        _totalCount = 0;
+        _isLoading = true;
+        _error = null;
       });
+    } else {
+      setState(() {
+        _isLoadingMore = true;
+      });
+    }
+
+    try {
+      final query = _searchController.text.trim();
+      final pageToLoad = isRefresh ? 1 : _currentPage + 1;
+      final result = await _apiService.getShopsPaginated(
+        search: query.isEmpty ? null : query,
+        page: pageToLoad,
+      );
+
+      final List<ShopModel> newShops = List<ShopModel>.from(result['results'] ?? []);
+      final bool hasNext = result['next'] != null;
+      final int total = result['count'] as int;
+
+      setState(() {
+        if (isRefresh) {
+          _allShops = newShops;
+          _currentPage = 1;
+        } else {
+          _allShops.addAll(newShops);
+          _currentPage = pageToLoad;
+        }
+        _hasNextPage = hasNext;
+        _totalCount = total;
+        _isLoading = false;
+        _isLoadingMore = false;
+      });
+      _checkAndLoadMore();
     } catch (e) {
       setState(() {
         _error = e.toString().replaceFirst('Exception: ', '');
         _isLoading = false;
+        _isLoadingMore = false;
       });
     }
   }
 
+  Future<void> _loadMoreShops() async {
+    if (_isLoadingMore || !_hasNextPage) return;
+    await _loadShops(isRefresh: false);
+  }
+
   void _onSearchChanged() {
-    final query = _searchController.text.toLowerCase();
-    setState(() {
-      if (query.isEmpty) {
-        _filteredShops = _allShops;
-      } else {
-        _filteredShops = _allShops.where((shop) {
-          final nameMatch = shop.shop_name.toLowerCase().contains(query);
-          final districtMatch = shop.districtName.toLowerCase().contains(query);
-          final stateMatch = shop.stateName.toLowerCase().contains(query);
-          return nameMatch || districtMatch || stateMatch;
-        }).toList();
-      }
+    setState(() {}); // Rebuild immediately to update suffix icon state
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _loadShops(isRefresh: true);
     });
   }
 
@@ -82,8 +143,10 @@ class _AllShopsPageState extends State<AllShopsPage> {
       backgroundColor: background,
       body: RefreshIndicator(
         color: primaryGreen,
-        onRefresh: _loadShops,
+        onRefresh: () => _loadShops(isRefresh: true),
         child: CustomScrollView(
+          controller: _scrollController,
+          physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             _buildSliverAppBar(),
             _buildSearchBox(),
@@ -91,7 +154,7 @@ class _AllShopsPageState extends State<AllShopsPage> {
               const ShopsListShimmer(itemCount: 4, isSliver: true)
             else if (_error != null)
               SliverFillRemaining(hasScrollBody: false, child: _buildError())
-            else if (_filteredShops.isEmpty)
+            else if (_allShops.isEmpty)
               SliverFillRemaining(hasScrollBody: false, child: _buildEmpty())
             else
               _buildShopList(),
@@ -145,7 +208,7 @@ class _AllShopsPageState extends State<AllShopsPage> {
                   Text(
                     _isLoading
                         ? 'Finding local shops...'
-                        : '${_allShops.length} premium stores active',
+                        : '$_totalCount premium stores active',
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.85),
                       fontSize: 13,
@@ -277,8 +340,25 @@ class _AllShopsPageState extends State<AllShopsPage> {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
-          (context, index) => _buildShopCard(_filteredShops[index]),
-          childCount: _filteredShops.length,
+          (context, index) {
+            if (index == _allShops.length) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(
+                      color: primaryGreen,
+                      strokeWidth: 2.5,
+                    ),
+                  ),
+                ),
+              );
+            }
+            return _buildShopCard(_allShops[index]);
+          },
+          childCount: _allShops.length + (_isLoadingMore ? 1 : 0),
         ),
       ),
     );
@@ -326,13 +406,13 @@ class _AllShopsPageState extends State<AllShopsPage> {
                         top: Radius.circular(24),
                       ),
                       child: shop.productImage != null
-                        ? Image.network(
-                            shop.productImage!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                _buildCoverPlaceholder(),
-                          )
-                        : _buildCoverPlaceholder(),
+                          ? Image.network(
+                              shop.productImage!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  _buildCoverPlaceholder(),
+                            )
+                          : _buildCoverPlaceholder(),
                     ),
                     if (!shop.isOpen)
                       Positioned.fill(
@@ -352,7 +432,10 @@ class _AllShopsPageState extends State<AllShopsPage> {
                               decoration: BoxDecoration(
                                 color: Colors.red.withOpacity(0.85),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.white, width: 1.5),
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 1.5,
+                                ),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withOpacity(0.3),
@@ -374,171 +457,172 @@ class _AllShopsPageState extends State<AllShopsPage> {
                           ),
                         ),
                       ),
-                  // Bottom Gradient Overlay
-                  Positioned.fill(
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(24),
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.transparent,
-                              Colors.black.withOpacity(0.05),
-                              Colors.black.withOpacity(0.85),
-                            ],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
+                    // Bottom Gradient Overlay
+                    Positioned.fill(
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(24),
+                        ),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withOpacity(0.05),
+                                Colors.black.withOpacity(0.85),
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  // Favorite Heart Icon
-                  // Positioned(
-                  //   top: 10,
-                  //   right: 10,
-                  //   child: Container(
-                  //     padding: const EdgeInsets.all(6),
-                  //     decoration: BoxDecoration(
-                  //       color: Colors.black.withOpacity(0.2),
-                  //       shape: BoxShape.circle,
-                  //     ),
-                  //     child: const Icon(
-                  //       Icons.favorite_border_rounded,
-                  //       color: Colors.white,
-                  //       size: 18,
-                  //     ),
-                  //   ),
-                  // ),
-                  // Price Tag Overlay
-                  if (shop.productPrice != null)
-                    Positioned(
-                      bottom: 10,
-                      left: 14,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'ITEMS',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          Text(
-                            'AT ₹${shop.productPrice!.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            // Shop details below Cover Image
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          shop.shop_name,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF1E1E1E),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
+                    // Favorite Heart Icon
+                    // Positioned(
+                    //   top: 10,
+                    //   right: 10,
+                    //   child: Container(
+                    //     padding: const EdgeInsets.all(6),
+                    //     decoration: BoxDecoration(
+                    //       color: Colors.black.withOpacity(0.2),
+                    //       shape: BoxShape.circle,
+                    //     ),
+                    //     child: const Icon(
+                    //       Icons.favorite_border_rounded,
+                    //       color: Colors.white,
+                    //       size: 18,
+                    //     ),
+                    //   ),
+                    // ),
+                    // Price Tag Overlay
+                    if (shop.productPrice != null)
+                      Positioned(
+                        bottom: 10,
+                        left: 14,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(2),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF1B8F3A),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.star_rounded,
-                                color: Colors.white,
-                                size: 10,
+                            Text(
+                              'ITEMS',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.9),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.5,
                               ),
                             ),
-                            const SizedBox(width: 4),
                             Text(
-                              '4.5',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.grey.shade800,
+                              'AT ₹${shop.productPrice!.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 3),
-                        Text(
-                          'Grocery • ${shop.districtName}, ${shop.stateName}',
-                          style: TextStyle(
-                            color: Colors.grey.shade500,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
+                      ),
+                  ],
+                ),
+              ),
+              // Shop details below Cover Image
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            shop.shop_name,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF1E1E1E),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF1B8F3A),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.star_rounded,
+                                  color: Colors.white,
+                                  size: 10,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '4.5',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.grey.shade800,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Grocery • ${shop.districtName}, ${shop.stateName}',
+                            style: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        // Container(
+                        //   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        //   decoration: BoxDecoration(
+                        //     color: isApproved
+                        //         ? const Color(0xFFE8F5E9)
+                        //         : const Color(0xFFFFF3E0),
+                        //     borderRadius: BorderRadius.circular(6),
+                        //   ),
+                        //   child: Text(
+                        //     isApproved ? 'Open' : 'Pending',
+                        //     style: TextStyle(
+                        //       fontSize: 9.5,
+                        //       fontWeight: FontWeight.w800,
+                        //       color: isApproved ? primaryGreen : Colors.orange.shade700,
+                        //     ),
+                        //   ),
+                        // ),
+                        const SizedBox(height: 10),
+                        Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: primaryGreen,
+                          size: 15,
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      // Container(
-                      //   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      //   decoration: BoxDecoration(
-                      //     color: isApproved
-                      //         ? const Color(0xFFE8F5E9)
-                      //         : const Color(0xFFFFF3E0),
-                      //     borderRadius: BorderRadius.circular(6),
-                      //   ),
-                      //   child: Text(
-                      //     isApproved ? 'Open' : 'Pending',
-                      //     style: TextStyle(
-                      //       fontSize: 9.5,
-                      //       fontWeight: FontWeight.w800,
-                      //       color: isApproved ? primaryGreen : Colors.orange.shade700,
-                      //     ),
-                      //   ),
-                      // ),
-                      const SizedBox(height: 10),
-                      Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        color: primaryGreen,
-                        size: 15,
-                      ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),),
+      ),
     );
   }
 
