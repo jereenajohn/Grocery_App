@@ -65,6 +65,13 @@ class _CartPageState extends State<CartPage> {
 
   String? _pendingRazorpayOrderId;
 
+  double _cartSubtotal = 0.0;
+  double _platformFee = 0.0;
+  double _convenienceFee = 0.0;
+  double _deliveryCharge = 0.0;
+  double _amountPayable = 0.0;
+
+
   @override
   void initState() {
     super.initState();
@@ -132,6 +139,32 @@ class _CartPageState extends State<CartPage> {
     }
   }
 
+  Future<void> _loadCartSummary() async {
+    try {
+      final summary = await _apiService.getCartSummary();
+      setState(() {
+        _cartSubtotal = double.tryParse(summary['subtotal']?.toString() ?? '0.0') ?? 0.0;
+        _platformFee = double.tryParse(summary['platform_fee']?.toString() ?? '0.0') ?? 0.0;
+        _convenienceFee = double.tryParse(summary['convenience_fee']?.toString() ?? '0.0') ?? 0.0;
+        _deliveryCharge = double.tryParse(summary['delivery_charge']?.toString() ?? '0.0') ?? 0.0;
+        _amountPayable = double.tryParse(summary['amount_payable']?.toString() ?? '0.0') ?? 0.0;
+      });
+    } catch (e) {
+      print("Error fetching cart summary: $e");
+      // Fallback calculations if summary API fails
+      setState(() {
+        _cartSubtotal = 0.0;
+        for (var item in _cartItems) {
+          _cartSubtotal += double.tryParse(item.totalPrice) ?? 0.0;
+        }
+        _platformFee = 0.0;
+        _convenienceFee = 0.0;
+        _deliveryCharge = _cartItems.isEmpty ? 0.00 : 5.00;
+        _amountPayable = _cartSubtotal + _deliveryCharge;
+      });
+    }
+  }
+
   Future<void> _loadCart() async {
     setState(() {
       _isLoading = true;
@@ -141,6 +174,9 @@ class _CartPageState extends State<CartPage> {
       final items = await _apiService.getCart();
       setState(() {
         _cartItems = items;
+      });
+      await _loadCartSummary();
+      setState(() {
         _isLoading = false;
       });
       await _apiService.syncCartShopContext(items);
@@ -167,6 +203,9 @@ class _CartPageState extends State<CartPage> {
       final items = await _apiService.getCart();
       setState(() {
         _cartItems = items;
+      });
+      await _loadCartSummary();
+      setState(() {
         _isLoading = false;
       });
       await _apiService.syncCartShopContext(items);
@@ -183,6 +222,9 @@ class _CartPageState extends State<CartPage> {
       final items = await _apiService.getCart();
       setState(() {
         _cartItems = items;
+      });
+      await _loadCartSummary();
+      setState(() {
         _isLoading = false;
       });
       await _apiService.syncCartShopContext(items);
@@ -194,6 +236,9 @@ class _CartPageState extends State<CartPage> {
         final items = await _apiService.getCart();
         setState(() {
           _cartItems = items;
+        });
+        await _loadCartSummary();
+        setState(() {
           _isLoading = false;
         });
         await _apiService.syncCartShopContext(items);
@@ -207,6 +252,7 @@ class _CartPageState extends State<CartPage> {
       }
     }
   }
+
 
   Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
     try {
@@ -254,17 +300,6 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
-  double get _subtotal {
-    double total = 0.0;
-    for (var item in _cartItems) {
-      total += double.tryParse(item.totalPrice) ?? 0.0;
-    }
-    return total;
-  }
-
-  double get _deliveryFee => _cartItems.isEmpty ? 0.00 : 5.00;
-  double get _tax => _subtotal * 0.05; // 5% tax
-  double get _grandTotal => _subtotal + _deliveryFee + _tax;
 
   @override
   Widget build(BuildContext context) {
@@ -1065,7 +1100,7 @@ class _CartPageState extends State<CartPage> {
                 style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
               ),
               Text(
-                '₹${_subtotal.toStringAsFixed(2)}',
+                '₹${_cartSubtotal.toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
@@ -1073,6 +1108,44 @@ class _CartPageState extends State<CartPage> {
               ),
             ],
           ),
+          if (_platformFee > 0) ...[
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Platform Fee',
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                ),
+                Text(
+                  '₹${_platformFee.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          if (_convenienceFee > 0) ...[
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Convenience Fee',
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                ),
+                Text(
+                  '₹${_convenienceFee.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1082,24 +1155,7 @@ class _CartPageState extends State<CartPage> {
                 style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
               ),
               Text(
-                '₹${_deliveryFee.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Taxes (5%)',
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
-              ),
-              Text(
-                '₹${_tax.toStringAsFixed(2)}',
+                '₹${_deliveryCharge.toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 14,
@@ -1118,7 +1174,7 @@ class _CartPageState extends State<CartPage> {
                 style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
               ),
               Text(
-                '₹${_grandTotal.toStringAsFixed(2)}',
+                '₹${_amountPayable.toStringAsFixed(2)}',
                 style: TextStyle(
                   color: hasOutOfStockItems
                       ? Colors.grey.shade500
@@ -1182,29 +1238,20 @@ class _CartPageState extends State<CartPage> {
   }
 
   Future<void> _submitOrderInline() async {
-    if (!_formKey.currentState!.validate()) {
-      _showSnackBar("Please fill in all checkout details", Colors.redAccent);
-      return;
-    }
-
+    if (!_formKey.currentState!.validate()) return;
     if (_selectedPaymentMethod == null) {
-      _showSnackBar("Please select a payment method", Colors.orangeAccent);
+      _showSnackBar("Please select a payment method", Colors.redAccent);
       return;
     }
-
     if (!_useNewAddress && _selectedAddress == null) {
-      _showSnackBar("Please select a delivery address", Colors.orangeAccent);
+      _showSnackBar("Please select a delivery address", Colors.redAccent);
       return;
     }
-
     if (_useNewAddress &&
         (_selectedCountry == null ||
             _selectedState == null ||
             _selectedDistrict == null)) {
-      _showSnackBar(
-        "Please complete the location details",
-        Colors.orangeAccent,
-      );
+      _showSnackBar("Please complete all address fields", Colors.redAccent);
       return;
     }
 
@@ -1274,7 +1321,7 @@ class _CartPageState extends State<CartPage> {
 
       if (isUpi) {
         final razorpayOrder = await _apiService.createRazorpayOrder(
-          amount: _subtotal,
+          amount: _amountPayable,
           fullName: _nameCtrl.text.trim(),
           phone: _phoneCtrl.text.trim(),
           address: finalAddress.address,

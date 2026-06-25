@@ -4,6 +4,9 @@ import 'package:grocery_app/views/Admin/add_district_page.dart';
 import 'package:grocery_app/views/Admin/manage_banners_page.dart';
 import 'add_state_page.dart';
 import 'manage_payment_methods_page.dart';
+import 'manage_platform_fees_page.dart';
+import 'manage_convenience_fees_page.dart';
+import 'manage_delivery_charges_page.dart';
 import '../../services/api_service.dart';
 import '../request_otp_page.dart';
 
@@ -208,6 +211,27 @@ class AdminSettingsPage extends StatelessWidget {
                       subtitle: 'Manage home page banners',
                       icon: Icons.image_rounded,
                       page: const ManageBannersPage(),
+                    ),
+                    menuTile(
+                      context: context,
+                      title: 'Platform Fees',
+                      subtitle: 'Manage administrative fee rates',
+                      icon: Icons.monetization_on_rounded,
+                      page: const ManagePlatformFeesPage(),
+                    ),
+                    menuTile(
+                      context: context,
+                      title: 'Convenience Fees',
+                      subtitle: 'Manage order convenience rates',
+                      icon: Icons.receipt_long_rounded,
+                      page: const ManageConvenienceFeesPage(),
+                    ),
+                    menuTile(
+                      context: context,
+                      title: 'Delivery Charges',
+                      subtitle: 'Manage order delivery charge rates',
+                      icon: Icons.local_shipping_rounded,
+                      page: const ManageDeliveryChargesPage(),
                     ),
                     const SizedBox(height: 10),
                     Container(

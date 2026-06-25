@@ -17,6 +17,9 @@ import '../models/cart_item_model.dart';
 import '../models/payment_method_model.dart';
 import '../models/banner_model.dart';
 import '../models/order_model.dart';
+import '../models/platform_fee_model.dart';
+import '../models/convenience_fee_model.dart';
+import '../models/delivery_charge_model.dart';
 
 class ApiService {
   // ─── OTP ────────────────────────────────────────────────────
@@ -2041,6 +2044,40 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> getCartSummary() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/cart/summary/');
+    print("GET CART SUMMARY URL: $url");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("GET CART SUMMARY STATUS: ${response.statusCode}");
+    print("GET CART SUMMARY BODY: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      if (decoded is Map<String, dynamic> && decoded['status'] == 'success') {
+        return decoded['data'] ?? {};
+      }
+      throw Exception("Unexpected cart summary response format");
+    } else {
+      String errorMessage = "Failed to load cart summary";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ?? decoded['message']?.toString() ?? decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+
   Future<void> addToCart({
     required int productId,
     required int quantity,
@@ -3316,6 +3353,466 @@ class ApiService {
             decoded['detail']?.toString() ??
             decoded['message']?.toString() ??
             decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  // ─── Admin Platform Fees ──────────────────────────────────────
+
+  Future<List<PlatformFeeModel>> getPlatformFees() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/admin/platform/fees/view/');
+    print("GET PLATFORM FEES URL: $url");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("GET PLATFORM FEES STATUS CODE: ${response.statusCode}");
+    print("GET PLATFORM FEES RESPONSE: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final List<dynamic> items = decoded is List
+          ? decoded
+          : (decoded['results'] ?? []);
+      return items.map((e) => PlatformFeeModel.fromJson(e)).toList();
+    } else {
+      String errorMessage = "Failed to load platform fees";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ?? decoded['message']?.toString() ?? decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<PlatformFeeModel> createPlatformFee({
+    required String name,
+    required String amount,
+    required bool isActive,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/admin/platform/fees/view/');
+    final body = {
+      "name": name,
+      "amount": amount,
+      "is_active": isActive,
+    };
+
+    print("POST PLATFORM FEE URL: $url");
+    print("POST PLATFORM FEE BODY: $body");
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(body),
+    );
+
+    print("POST PLATFORM FEE STATUS CODE: ${response.statusCode}");
+    print("POST PLATFORM FEE RESPONSE: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return PlatformFeeModel.fromJson(decoded);
+    } else {
+      String errorMessage = "Failed to create platform fee";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ?? decoded['message']?.toString() ?? decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<PlatformFeeModel> updatePlatformFee({
+    required int id,
+    required String name,
+    required String amount,
+    required bool isActive,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/admin/platform/fees/update/$id/',
+    );
+    final body = {
+      "name": name,
+      "amount": amount,
+      "is_active": isActive,
+    };
+
+    print("PUT PLATFORM FEE URL: $url");
+    print("PUT PLATFORM FEE BODY: $body");
+
+    final response = await http.put(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(body),
+    );
+
+    print("PUT PLATFORM FEE STATUS CODE: ${response.statusCode}");
+    print("PUT PLATFORM FEE RESPONSE: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return PlatformFeeModel.fromJson(decoded);
+    } else {
+      String errorMessage = "Failed to update platform fee";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ?? decoded['message']?.toString() ?? decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<void> deletePlatformFee({required int id}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/admin/platform/fees/update/$id/',
+    );
+
+    print("DELETE PLATFORM FEE URL: $url");
+
+    final response = await http.delete(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("DELETE PLATFORM FEE STATUS CODE: ${response.statusCode}");
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      final decoded = jsonDecode(response.body);
+      String errorMessage = "Failed to delete platform fee";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ?? decoded['message']?.toString() ?? decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  // ─── Admin Convenience Fees ──────────────────────────────────
+
+  Future<List<ConvenienceFeeModel>> getConvenienceFees() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/admin/convenience/fees/view/');
+    print("GET CONVENIENCE FEES URL: $url");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("GET CONVENIENCE FEES STATUS CODE: ${response.statusCode}");
+    print("GET CONVENIENCE FEES RESPONSE: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final List<dynamic> items = decoded is List
+          ? decoded
+          : (decoded['results'] ?? []);
+      return items.map((e) => ConvenienceFeeModel.fromJson(e)).toList();
+    } else {
+      String errorMessage = "Failed to load convenience fees";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ?? decoded['message']?.toString() ?? decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<ConvenienceFeeModel> createConvenienceFee({
+    required String name,
+    required String amount,
+    required bool isActive,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/admin/convenience/fees/view/');
+    final body = {
+      "name": name,
+      "amount": amount,
+      "is_active": isActive,
+    };
+
+    print("POST CONVENIENCE FEE URL: $url");
+    print("POST CONVENIENCE FEE BODY: $body");
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(body),
+    );
+
+    print("POST CONVENIENCE FEE STATUS CODE: ${response.statusCode}");
+    print("POST CONVENIENCE FEE RESPONSE: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return ConvenienceFeeModel.fromJson(decoded);
+    } else {
+      String errorMessage = "Failed to create convenience fee";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ?? decoded['message']?.toString() ?? decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<ConvenienceFeeModel> updateConvenienceFee({
+    required int id,
+    required String name,
+    required String amount,
+    required bool isActive,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/admin/convenience/fees/update/$id/',
+    );
+    final body = {
+      "name": name,
+      "amount": amount,
+      "is_active": isActive,
+    };
+
+    print("PUT CONVENIENCE FEE URL: $url");
+    print("PUT CONVENIENCE FEE BODY: $body");
+
+    final response = await http.put(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(body),
+    );
+
+    print("PUT CONVENIENCE FEE STATUS CODE: ${response.statusCode}");
+    print("PUT CONVENIENCE FEE RESPONSE: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return ConvenienceFeeModel.fromJson(decoded);
+    } else {
+      String errorMessage = "Failed to update convenience fee";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ?? decoded['message']?.toString() ?? decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<void> deleteConvenienceFee({required int id}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/admin/convenience/fees/update/$id/',
+    );
+
+    print("DELETE CONVENIENCE FEE URL: $url");
+
+    final response = await http.delete(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("DELETE CONVENIENCE FEE STATUS CODE: ${response.statusCode}");
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      final decoded = jsonDecode(response.body);
+      String errorMessage = "Failed to delete convenience fee";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ?? decoded['message']?.toString() ?? decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  // ─── Admin Delivery Charges ──────────────────────────────────
+
+  Future<List<DeliveryChargeModel>> getDeliveryCharges() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/admin/delivery/charges/view/');
+    print("GET DELIVERY CHARGES URL: $url");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("GET DELIVERY CHARGES STATUS CODE: ${response.statusCode}");
+    print("GET DELIVERY CHARGES RESPONSE: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final List<dynamic> items = decoded is List
+          ? decoded
+          : (decoded['results'] ?? []);
+      return items.map((e) => DeliveryChargeModel.fromJson(e)).toList();
+    } else {
+      String errorMessage = "Failed to load delivery charges";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ?? decoded['message']?.toString() ?? decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<DeliveryChargeModel> createDeliveryCharge({
+    required String name,
+    required String amount,
+    required String minOrderAmount,
+    required bool isActive,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/admin/delivery/charges/view/');
+    final body = {
+      "name": name,
+      "amount": amount,
+      "min_order_amount": minOrderAmount,
+      "is_active": isActive,
+    };
+
+    print("POST DELIVERY CHARGE URL: $url");
+    print("POST DELIVERY CHARGE BODY: $body");
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(body),
+    );
+
+    print("POST DELIVERY CHARGE STATUS CODE: ${response.statusCode}");
+    print("POST DELIVERY CHARGE RESPONSE: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return DeliveryChargeModel.fromJson(decoded);
+    } else {
+      String errorMessage = "Failed to create delivery charge";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ?? decoded['message']?.toString() ?? decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<DeliveryChargeModel> updateDeliveryCharge({
+    required int id,
+    required String name,
+    required String amount,
+    required String minOrderAmount,
+    required bool isActive,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/admin/delivery/charges/update/$id/',
+    );
+    final body = {
+      "name": name,
+      "amount": amount,
+      "min_order_amount": minOrderAmount,
+      "is_active": isActive,
+    };
+
+    print("PUT DELIVERY CHARGE URL: $url");
+    print("PUT DELIVERY CHARGE BODY: $body");
+
+    final response = await http.put(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode(body),
+    );
+
+    print("PUT DELIVERY CHARGE STATUS CODE: ${response.statusCode}");
+    print("PUT DELIVERY CHARGE RESPONSE: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return DeliveryChargeModel.fromJson(decoded);
+    } else {
+      String errorMessage = "Failed to update delivery charge";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ?? decoded['message']?.toString() ?? decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<void> deleteDeliveryCharge({required int id}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/admin/delivery/charges/update/$id/',
+    );
+
+    print("DELETE DELIVERY CHARGE URL: $url");
+
+    final response = await http.delete(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("DELETE DELIVERY CHARGE STATUS CODE: ${response.statusCode}");
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      final decoded = jsonDecode(response.body);
+      String errorMessage = "Failed to delete delivery charge";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ?? decoded['message']?.toString() ?? decoded.toString();
       }
       throw Exception(errorMessage);
     }
