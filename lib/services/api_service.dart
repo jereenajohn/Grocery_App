@@ -2044,6 +2044,40 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> getCartSummary() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/cart/summary/');
+    print("GET CART SUMMARY URL: $url");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("GET CART SUMMARY STATUS: ${response.statusCode}");
+    print("GET CART SUMMARY BODY: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      if (decoded is Map<String, dynamic> && decoded['status'] == 'success') {
+        return decoded['data'] ?? {};
+      }
+      throw Exception("Unexpected cart summary response format");
+    } else {
+      String errorMessage = "Failed to load cart summary";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage = decoded['detail']?.toString() ?? decoded['message']?.toString() ?? decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+
   Future<void> addToCart({
     required int productId,
     required int quantity,
