@@ -70,44 +70,49 @@ class _VerifyOtpPageState extends State<VerifyOtpPage> {
 
       if (firstTime == false) {
         if (userType == 'admin') {
-          Navigator.pushReplacement(
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
               builder: (_) => const AdminHomePage(),
             ),
+            (route) => false,
           );
         } else if (userType == 'shop') {
           final String approvalStatus =
               user is Map<String, dynamic> ? user['approval_status']?.toString().toLowerCase() ?? '' : '';
 
           if (approvalStatus == 'approved') {
-            Navigator.pushReplacement(
+            Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(
                 builder: (_) => const ShopHomePage(),
               ),
+              (route) => false,
             );
           } else if (approvalStatus == 'rejected') {
-            Navigator.pushReplacement(
+            Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(
                 builder: (_) => const ShopRejectedPage(),
               ),
+              (route) => false,
             );
           } else {
-            Navigator.pushReplacement(
+            Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(
                 builder: (_) => const ShopPendingPage(),
               ),
+              (route) => false,
             );
           }
         } else if (userType == 'user') {
-          Navigator.pushReplacement(
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
               builder: (_) => const UserHomePage(),
             ),
+            (route) => false,
           );
         } else {
           Navigator.pushReplacement(

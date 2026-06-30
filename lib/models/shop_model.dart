@@ -21,6 +21,7 @@ class ShopModel {
   final String? longitude;
   final String? productImage;
   final double? productPrice;
+  final double? avgRating;
   final String createdAt;
   final bool isOpen;
 
@@ -45,6 +46,7 @@ class ShopModel {
     this.longitude,
     this.productImage,
     this.productPrice,
+    this.avgRating,
     required this.createdAt,
     required this.isOpen,
   });
@@ -71,6 +73,9 @@ class ShopModel {
     final double? productPri = json['product_price'] != null
         ? double.tryParse(json['product_price'].toString())
         : null;
+    final double? rating = json['avg_rating'] != null
+        ? double.tryParse(json['avg_rating'].toString())
+        : null;
 
     return ShopModel(
       id: json['id'] ?? 0,
@@ -93,6 +98,7 @@ class ShopModel {
       longitude: json['longitude']?.toString(),
       productImage: productImg,
       productPrice: productPri,
+      avgRating: rating,
       createdAt: json['created_at']?.toString() ?? '',
       isOpen: json['is_open'] ?? json['is_active'] ?? true,
     );

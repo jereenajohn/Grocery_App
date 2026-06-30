@@ -928,6 +928,23 @@ class _OrderDetailBottomSheetState extends State<_OrderDetailBottomSheet> {
                   padding: EdgeInsets.symmetric(vertical: 10),
                   child: Divider(height: 1, thickness: 1, color: Color(0xFFE8F5E9)),
                 ),
+                _priceSummaryRow('Subtotal', '₹${order.subtotal}'),
+                if (double.tryParse(order.platformFee) != null && double.parse(order.platformFee) > 0) ...[
+                  const SizedBox(height: 6),
+                  _priceSummaryRow('Platform Fee', '₹${order.platformFee}'),
+                ],
+                if (double.tryParse(order.convenienceFee) != null && double.parse(order.convenienceFee) > 0) ...[
+                  const SizedBox(height: 6),
+                  _priceSummaryRow('Convenience Fee', '₹${order.convenienceFee}'),
+                ],
+                if (double.tryParse(order.deliveryCharge) != null && double.parse(order.deliveryCharge) > 0) ...[
+                  const SizedBox(height: 6),
+                  _priceSummaryRow('Delivery Charge', '₹${order.deliveryCharge}'),
+                ],
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 10),
+                  child: Divider(height: 1, thickness: 1, color: Color(0xFFE8F5E9)),
+                ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -945,6 +962,17 @@ class _OrderDetailBottomSheetState extends State<_OrderDetailBottomSheet> {
                     ),
                   ],
                 ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 10),
+                  child: Divider(height: 1, thickness: 1, color: Color(0xFFE8F5E9)),
+                ),
+                _priceSummaryRow('Payment Method', order.paymentMethodName),
+                if (order.paymentRef != null && order.paymentRef!.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  _priceSummaryRow('Reference ID', order.paymentRef!),
+                ],
+                const SizedBox(height: 6),
+                _priceSummaryRow('Amount Paid', '₹${order.amountPaid.toStringAsFixed(2)}'),
               ],
             ),
           ),
@@ -963,20 +991,6 @@ class _OrderDetailBottomSheetState extends State<_OrderDetailBottomSheet> {
                 ),
                 if (order.note != null && order.note!.isNotEmpty)
                   _infoRow(Icons.sticky_note_2_rounded, 'Order Notes', order.note!),
-              ],
-            ),
-          ),
-          _sectionCard(
-            title: 'PAYMENT INFORMATION',
-            icon: Icons.payment_rounded,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _infoRow(Icons.account_balance_wallet_rounded, 'Method', order.paymentMethodName),
-                if (order.paymentRef != null && order.paymentRef!.isNotEmpty)
-                  _infoRow(Icons.tag_rounded, 'Reference ID', order.paymentRef!),
-                _infoRow(Icons.calendar_today_rounded, 'Placed At', widget.formatDateTime(order.createdAt)),
-                _infoRow(Icons.update_rounded, 'Last Updated', widget.formatDateTime(order.updatedAt)),
               ],
             ),
           ),
@@ -1140,6 +1154,33 @@ class _OrderDetailBottomSheetState extends State<_OrderDetailBottomSheet> {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _priceSummaryRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              color: Colors.grey.shade800,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],

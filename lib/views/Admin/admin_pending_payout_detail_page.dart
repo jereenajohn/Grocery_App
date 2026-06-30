@@ -5,15 +5,15 @@ import '../../services/api_service.dart';
 import '../../models/order_model.dart';
 import '../widgets/shimmer_loading.dart';
 
-class AdminOrderDetailPage extends StatefulWidget {
+class AdminPendingPayoutDetailPage extends StatefulWidget {
   final int orderId;
-  const AdminOrderDetailPage({super.key, required this.orderId});
+  const AdminPendingPayoutDetailPage({super.key, required this.orderId});
 
   @override
-  State<AdminOrderDetailPage> createState() => _AdminOrderDetailPageState();
+  State<AdminPendingPayoutDetailPage> createState() => _AdminPendingPayoutDetailPageState();
 }
 
-class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
+class _AdminPendingPayoutDetailPageState extends State<AdminPendingPayoutDetailPage> {
   final ApiService _apiService = ApiService();
   
   final Color primaryGreen = const Color(0xFF1B8F3A);
@@ -42,7 +42,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
     });
 
     try {
-      final detailFuture = _apiService.getAdminOrderDetail(orderId: widget.orderId);
+      final detailFuture = _apiService.getUnpaidPayoutDetail(orderId: widget.orderId);
       final paymentStatusFuture = _apiService.getOrderPaymentStatus(orderId: widget.orderId);
 
       final results = await Future.wait([detailFuture, paymentStatusFuture]);
@@ -172,10 +172,10 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Order Details',
+                  'Payout Order Details',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 23,
+                    fontSize: 22,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
@@ -184,12 +184,12 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                   children: [
                     Expanded(
                       child: Text(
-                        _orderDetail != null ? _orderDetail!.orderNo : 'Loading order...',
+                        _orderDetail?.orderNo ?? 'Loading...',
                         style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.bold,
                           fontFamily: 'monospace',
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          color: Colors.white70,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -200,11 +200,16 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                         onTap: () => _copyToClipboard(_orderDetail!.orderNo, 'Order Number'),
                         child: Container(
                           padding: const EdgeInsets.all(4),
+                          margin: const EdgeInsets.only(left: 6),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
+                            color: Colors.white.withOpacity(0.12),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Icon(Icons.copy_rounded, color: Colors.white, size: 13),
+                          child: const Icon(
+                            Icons.copy_rounded,
+                            size: 12,
+                            color: Colors.white70,
+                          ),
                         ),
                       ),
                   ],
@@ -212,132 +217,143 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
               ],
             ),
           ),
+          if (_orderDetail != null) ...[
+            const SizedBox(width: 8),
+            _statusBadge(_orderDetail!.status),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildStatusStepper(String status) {
+  Widget _statusBadge(String status) {
     final lower = status.toLowerCase();
-    int currentStep = 0;
-    bool isFailed = lower == 'failed' || lower == 'rejected' || lower == 'cancelled';
+    Color bgColor = Colors.white24;
+    Color textColor = Colors.white;
 
-    if (lower == 'pending') {
-      currentStep = 0;
-    } else if (lower == 'processing' || lower == 'approved') {
-      currentStep = 1;
-    } else if (lower == 'completed') {
-      currentStep = 2;
+    if (lower == 'completed' || lower == 'approved') {
+      bgColor = const Color(0xFFE8F5E9);
+      textColor = const Color(0xFF1B8F3A);
+    } else if (lower == 'pending') {
+      bgColor = const Color(0xFFFFF3E0);
+      textColor = Colors.orange.shade800;
+    } else if (lower == 'failed' || lower == 'rejected' || lower == 'cancelled') {
+      bgColor = const Color(0xFFFFEBEE);
+      textColor = Colors.red.shade800;
     }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: TextStyle(
+          color: textColor,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusStepper(String currentStatus) {
+    final lower = currentStatus.toLowerCase();
+    int currentStep = 0;
+    if (lower == 'pending') currentStep = 0;
+    if (lower == 'shipped') currentStep = 1;
+    if (lower == 'completed') currentStep = 2;
+    if (lower == 'cancelled') currentStep = -1;
+
+    final steps = ['PENDING', 'SHIPPED', 'COMPLETED'];
+
+    if (currentStep == -1) {
+      return Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 20),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.red.shade50,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.red.shade100),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.cancel_rounded, color: Colors.red.shade700, size: 24),
+            const SizedBox(width: 12),
+            Text(
+              'ORDER CANCELLED',
+              style: TextStyle(
+                color: Colors.red.shade800,
+                fontWeight: FontWeight.w900,
+                fontSize: 13,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: Colors.green.shade50),
         boxShadow: [
           BoxShadow(
-            color: Colors.green.withOpacity(0.03),
+            color: primaryGreen.withOpacity(0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'ORDER PROGRESS TIMELINE',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w900,
-              color: primaryGreen,
-              letterSpacing: 0.5,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: List.generate(steps.length, (index) {
+          final isCompleted = index <= currentStep;
+          final stepColor = isCompleted ? primaryGreen : Colors.grey.shade300;
+          return Expanded(
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 12,
+                  backgroundColor: stepColor.withOpacity(0.12),
+                  child: Icon(
+                    isCompleted ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                    size: 15,
+                    color: stepColor,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  steps[index],
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    color: isCompleted ? Colors.grey.shade800 : Colors.grey.shade400,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                if (index < steps.length - 1)
+                  Expanded(
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      height: 1.5,
+                      color: stepColor,
+                    ),
+                  ),
+              ],
             ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              _stepperNode(
-                title: 'Placed',
-                subtitle: 'Order Received',
-                isActive: currentStep >= 0,
-                isCompleted: currentStep > 0,
-              ),
-              _stepperLine(isActive: currentStep > 0),
-              _stepperNode(
-                title: isFailed ? 'Failed' : 'Processing',
-                subtitle: isFailed ? 'Status: $status' : 'In Preparation',
-                isActive: currentStep >= 1 || isFailed,
-                isCompleted: currentStep > 1 && !isFailed,
-                isError: isFailed,
-              ),
-              _stepperLine(isActive: currentStep > 1 && !isFailed),
-              _stepperNode(
-                title: 'Completed',
-                subtitle: 'Handed Over',
-                isActive: currentStep >= 2 && !isFailed,
-                isCompleted: currentStep >= 2 && !isFailed,
-              ),
-            ],
-          ),
-        ],
+          );
+        }),
       ),
-    );
-  }
-
-  Widget _stepperNode({
-    required String title,
-    required String subtitle,
-    required bool isActive,
-    required bool isCompleted,
-    bool isError = false,
-  }) {
-    Color nodeColor = Colors.grey.shade300;
-    IconData icon = Icons.circle_outlined;
-
-    if (isActive) {
-      nodeColor = isError ? Colors.red : primaryGreen;
-      icon = isError ? Icons.cancel_rounded : (isCompleted ? Icons.check_circle_rounded : Icons.pending_rounded);
-    }
-
-    return Expanded(
-      child: Column(
-        children: [
-          Icon(icon, color: nodeColor, size: 24),
-          const SizedBox(height: 6),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
-              color: isActive ? Colors.grey.shade800 : Colors.grey.shade400,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 9,
-              color: Colors.grey.shade400,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _stepperLine({required bool isActive}) {
-    return Container(
-      width: 32,
-      height: 2,
-      margin: const EdgeInsets.only(bottom: 24),
-      color: isActive ? primaryGreen : Colors.grey.shade200,
     );
   }
 
@@ -349,16 +365,16 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
   }) {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.green.shade50),
         boxShadow: [
           BoxShadow(
-            color: Colors.green.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.green.withOpacity(0.02),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -851,6 +867,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                 ],
               ),
             ),
+
             _sectionCard(
               title: 'UPDATE SELLER PAYMENT STATUS',
               icon: Icons.price_check_rounded,
@@ -946,6 +963,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                 ],
               ),
             ),
+
             if (order.paymentSettlementDetails != null)
               _sectionCard(
                 title: 'PAYMENT SETTLEMENT BREAKDOWN',
@@ -997,6 +1015,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                   ],
                 ),
               ),
+
             if (order.rating != null)
               _sectionCard(
                 title: 'CUSTOMER FEEDBACK',

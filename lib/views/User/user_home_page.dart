@@ -37,8 +37,11 @@ class _UserHomePageState extends State<UserHomePage> {
   AddressModel? _primaryAddress;
   List<ShopModel> _shops = [];
   bool _shopsLoading = true;
+  List<ShopModel> _topRatedShops = [];
+  bool _topRatedShopsLoading = true;
   List<CategoryModel> _categories = [];
   bool _categoriesLoading = true;
+  double _selectedRadius = 10.0;
 
   List<BannerModel> _banners = [];
   bool _bannersLoading = true;
@@ -59,7 +62,7 @@ class _UserHomePageState extends State<UserHomePage> {
     super.initState();
     _loadUserData();
     _loadAddresses();
-    _loadShops();
+    _initializeShopsAndRadius();
     _loadCategories();
     _startPromoAutoScroll();
     _loadBanners();
@@ -148,10 +151,40 @@ class _UserHomePageState extends State<UserHomePage> {
     }
   }
 
+  Future<void> _loadRadiusFilter() async {
+    try {
+      final radius = await _apiService.getRadiusFilter();
+      if (mounted) {
+        setState(() {
+          _selectedRadius = radius;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _loadTopRatedShops() async {
+    setState(() => _topRatedShopsLoading = true);
+    try {
+      final shops = await _apiService.getTopRatedShops();
+      setState(() {
+        _topRatedShops = shops;
+        _topRatedShopsLoading = false;
+      });
+    } catch (_) {
+      setState(() => _topRatedShopsLoading = false);
+    }
+  }
+
+  Future<void> _initializeShopsAndRadius() async {
+    await _loadRadiusFilter();
+    await _loadShops();
+    await _loadTopRatedShops();
+  }
+
   Future<void> _loadShops({String? search}) async {
     setState(() => _shopsLoading = true);
     try {
-      final shops = await _apiService.getShops(search: search);
+      final shops = await _apiService.getShops(search: search, radius: _selectedRadius);
       setState(() {
         _shops = shops;
         _shopsLoading = false;
@@ -513,7 +546,11 @@ class _UserHomePageState extends State<UserHomePage> {
               onTap: () async {
                 final result = await Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const MapAddressPickerPage()),
+                  MaterialPageRoute(
+                    builder: (_) => MapAddressPickerPage(
+                      existingAddress: _primaryAddress,
+                    ),
+                  ),
                 );
                 if (result == true) {
                   _loadAddresses();
@@ -624,6 +661,115 @@ class _UserHomePageState extends State<UserHomePage> {
     );
   }
 
+  Widget _buildRadiusSlider() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(18, 14, 18, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.green.shade50),
+        boxShadow: [
+          BoxShadow(
+            color: primaryGreen.withOpacity(0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.radar_rounded, color: primaryGreen, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Search Radius',
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: lightGreen,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '${_selectedRadius.toStringAsFixed(0)} km',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w900,
+                    color: primaryGreen,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text(
+                '5 km',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade400,
+                ),
+              ),
+              Expanded(
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: primaryGreen,
+                    inactiveTrackColor: Colors.grey.shade100,
+                    trackHeight: 4.0,
+                    thumbColor: primaryGreen,
+                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8.0),
+                    overlayColor: primaryGreen.withOpacity(0.12),
+                    overlayShape: const RoundSliderOverlayShape(overlayRadius: 16.0),
+                  ),
+                  child: Slider(
+                    value: _selectedRadius,
+                    min: 5.0,
+                    max: 20.0,
+                    divisions: 15,
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedRadius = value;
+                      });
+                    },
+                    onChangeEnd: (value) async {
+                      try {
+                        await _apiService.updateRadiusFilter(value);
+                        _loadShops();
+                      } catch (_) {}
+                    },
+                  ),
+                ),
+              ),
+              Text(
+                '20 km',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade400,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCategories() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -724,11 +870,26 @@ class _UserHomePageState extends State<UserHomePage> {
                               ),
                             ],
                           ),
-                          child: Icon(
-                            visuals['icon'],
-                            color: visuals['iconColor'],
-                            size: 28,
-                          ),
+                          child: cat.image != null && cat.image!.isNotEmpty
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Image.network(
+                                    cat.image!,
+                                    fit: BoxFit.cover,
+                                    width: 64,
+                                    height: 64,
+                                    errorBuilder: (ctx, err, stack) => Icon(
+                                      visuals['icon'],
+                                      color: visuals['iconColor'],
+                                      size: 28,
+                                    ),
+                                  ),
+                                )
+                              : Icon(
+                                  visuals['icon'],
+                                  color: visuals['iconColor'],
+                                  size: 28,
+                                ),
                         ),
                         const SizedBox(height: 7),
                         Text(
@@ -888,10 +1049,10 @@ class _UserHomePageState extends State<UserHomePage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Nearby Shops',
+                'Top Rated Shops',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
               ),
-              if (_shopsLoading)
+              if (_topRatedShopsLoading)
                 SizedBox(
                   height: 16,
                   width: 16,
@@ -931,9 +1092,9 @@ class _UserHomePageState extends State<UserHomePage> {
             ],
           ),
         ),
-        if (_shopsLoading)
+        if (_topRatedShopsLoading)
           const ShopsListShimmer(itemCount: 2)
-        else if (_shops.isEmpty)
+        else if (_topRatedShops.isEmpty)
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 18),
             padding: const EdgeInsets.all(20),
@@ -951,7 +1112,7 @@ class _UserHomePageState extends State<UserHomePage> {
                 ),
                 const SizedBox(width: 14),
                 Text(
-                  'No shops available nearby',
+                  'No top rated shops available',
                   style: TextStyle(
                     color: Colors.grey.shade500,
                     fontWeight: FontWeight.w600,
@@ -966,9 +1127,9 @@ class _UserHomePageState extends State<UserHomePage> {
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _shops.length > 6 ? 7 : (_shops.isEmpty ? 0 : _shops.length + 1),
+              itemCount: _topRatedShops.length > 6 ? 7 : (_topRatedShops.isEmpty ? 0 : _topRatedShops.length + 1),
               itemBuilder: (context, index) {
-                final showViewAll = (_shops.length > 6 && index == 6) || (_shops.length <= 6 && index == _shops.length);
+                final showViewAll = (_topRatedShops.length > 6 && index == 6) || (_topRatedShops.length <= 6 && index == _topRatedShops.length);
 
                 if (showViewAll) {
                   return GestureDetector(
@@ -1025,8 +1186,8 @@ class _UserHomePageState extends State<UserHomePage> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                _shops.length > 6
-                                    ? '${_shops.length - 6} more shops'
+                                _topRatedShops.length > 6
+                                    ? '${_topRatedShops.length - 6} more shops'
                                     : 'Explore all',
                                 style: TextStyle(
                                   fontSize: 10,
@@ -1042,7 +1203,7 @@ class _UserHomePageState extends State<UserHomePage> {
                   );
                 }
 
-                final shop = _shops[index];
+                final shop = _topRatedShops[index];
 
                 return GestureDetector(
                   onTap: () {
@@ -1226,7 +1387,7 @@ class _UserHomePageState extends State<UserHomePage> {
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
-                                      '4.5',
+                                      shop.avgRating?.toStringAsFixed(1) ?? 'N/A',
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w800,
@@ -1276,6 +1437,263 @@ class _UserHomePageState extends State<UserHomePage> {
           color: primaryGreen.withOpacity(0.4),
           size: 32,
         ),
+      ),
+    );
+  }
+
+  Widget _buildVerticalShopCard(ShopModel shop) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => ShopProductsPage(shop: shop)),
+        );
+      },
+      child: Opacity(
+        opacity: shop.isOpen ? 1.0 : 0.65,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.green.shade50.withOpacity(0.5)),
+            boxShadow: [
+              BoxShadow(
+                color: primaryGreen.withOpacity(0.04),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Cover Image Block
+              SizedBox(
+                height: 140,
+                width: double.infinity,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Image
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(24),
+                      ),
+                      child: shop.productImage != null
+                          ? Image.network(
+                              shop.productImage!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  _buildCardPlaceholder(),
+                            )
+                          : _buildCardPlaceholder(),
+                    ),
+                    if (!shop.isOpen)
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.4),
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(24),
+                            ),
+                          ),
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withOpacity(0.85),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 1.5,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: const Text(
+                                'CLOSED',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    // Bottom Gradient Overlay
+                    Positioned.fill(
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(24),
+                        ),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withOpacity(0.05),
+                                Colors.black.withOpacity(0.85),
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Price Tag Overlay
+                    if (shop.productPrice != null)
+                      Positioned(
+                        bottom: 10,
+                        left: 14,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'ITEMS',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.9),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            Text(
+                              'AT ₹${shop.productPrice!.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              // Shop details below Cover Image
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            shop.shop_name,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF1E1E1E),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(2),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF1B8F3A),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.star_rounded,
+                                  color: Colors.white,
+                                  size: 10,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                shop.avgRating?.toStringAsFixed(1) ?? 'N/A',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.grey.shade800,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Grocery • ${shop.districtName}, ${shop.stateName}',
+                            style: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const SizedBox(height: 10),
+                        Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: primaryGreen,
+                          size: 15,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVerticalAllShops() {
+    if (_shopsLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: ShopsListShimmer(itemCount: 2),
+      );
+    }
+
+    if (_shops.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(4, 24, 4, 12),
+            child: Text(
+              'All Shops',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+            ),
+          ),
+          ..._shops.map((shop) => _buildVerticalShopCard(shop)),
+          const SizedBox(height: 16),
+        ],
       ),
     );
   }
@@ -2361,9 +2779,11 @@ class _UserHomePageState extends State<UserHomePage> {
             children: [
               _buildHeader(),
               _buildSearchBar(),
+              _buildRadiusSlider(),
               _buildPromoBanner(),
               _buildCategories(),
               _buildShops(),
+              _buildVerticalAllShops(),
               const SizedBox(height: 24),
             ],
           ),

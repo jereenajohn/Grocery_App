@@ -1141,20 +1141,25 @@ class ApiService {
   Future<void> addCategory({
     required String name,
     required String description,
+    File? image,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
     final url = Uri.parse('${ApiConstants.api}api/grocery/categories/view/');
 
-    final response = await http.post(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-      },
-      body: jsonEncode({"name": name, "description": description}),
-    );
+    final request = http.MultipartRequest('POST', url);
+    request.headers['Authorization'] = 'Bearer $token';
+
+    request.fields['name'] = name;
+    request.fields['description'] = description;
+
+    if (image != null) {
+      request.files.add(await http.MultipartFile.fromPath('image', image.path));
+    }
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode != 200 && response.statusCode != 201) {
       final decoded = jsonDecode(response.body);
@@ -1173,6 +1178,7 @@ class ApiService {
     required int id,
     required String name,
     required String description,
+    File? image,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
@@ -1181,14 +1187,18 @@ class ApiService {
       '${ApiConstants.api}api/grocery/categories/update/$id/',
     );
 
-    final response = await http.put(
-      url,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
-      },
-      body: jsonEncode({"name": name, "description": description}),
-    );
+    final request = http.MultipartRequest('PUT', url);
+    request.headers['Authorization'] = 'Bearer $token';
+
+    request.fields['name'] = name;
+    request.fields['description'] = description;
+
+    if (image != null) {
+      request.files.add(await http.MultipartFile.fromPath('image', image.path));
+    }
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode != 200 && response.statusCode != 201) {
       final decoded = jsonDecode(response.body);
@@ -1462,7 +1472,29 @@ class ApiService {
     required int state,
     required int district,
     required String postalCode,
+    double? latitude,
+    double? longitude,
   }) async {
+    try {
+      final existing = await getAddresses();
+      if (existing.isNotEmpty) {
+        return await updateAddress(
+          addressId: existing.first.id,
+          address: address,
+          landmark: landmark,
+          city: city,
+          country: country,
+          state: state,
+          district: district,
+          postalCode: postalCode,
+          latitude: latitude,
+          longitude: longitude,
+        );
+      }
+    } catch (e) {
+      print("Error checking existing addresses, proceeding to add: $e");
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
@@ -1475,6 +1507,8 @@ class ApiService {
       "state": state,
       "district": district,
       "postal_code": postalCode,
+      "latitude": latitude,
+      "longitude": longitude,
     };
 
     print("ADD ADDRESS URL: $url");
@@ -1516,6 +1550,8 @@ class ApiService {
     required int state,
     required int district,
     required String postalCode,
+    double? latitude,
+    double? longitude,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
@@ -1531,6 +1567,8 @@ class ApiService {
       "state": state,
       "district": district,
       "postal_code": postalCode,
+      "latitude": latitude,
+      "longitude": longitude,
     };
 
     print("UPDATE ADDRESS URL: $url");
@@ -1598,13 +1636,16 @@ class ApiService {
 
   // ─── Shops ───────────────────────────────────────────────────
 
-  Future<List<ShopModel>> getShops({String? search}) async {
+  Future<List<ShopModel>> getShops({String? search, double? radius}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access') ?? '';
 
     final queryParams = <String, String>{};
     if (search != null && search.isNotEmpty) {
       queryParams['search'] = search;
+    }
+    if (radius != null) {
+      queryParams['radius'] = radius.toStringAsFixed(1);
     }
 
     final url = Uri.parse(
@@ -1632,6 +1673,97 @@ class ApiService {
     } else {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to load shops";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage =
+            decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<double> getRadiusFilter() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/shops/filter/radius/');
+    print("GET RADIUS URL: $url");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("GET RADIUS STATUS CODE: ${response.statusCode}");
+    print("GET RADIUS RESPONSE: ${response.body}");
+
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+      final radiusVal = decoded['radius'];
+      if (radiusVal is num) {
+        return radiusVal.toDouble();
+      }
+      return double.tryParse(radiusVal?.toString() ?? '') ?? 10.0;
+    } else {
+      throw Exception("Failed to load radius filter");
+    }
+  }
+
+  Future<void> updateRadiusFilter(double radius) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/shops/filter/radius/');
+    print("UPDATE RADIUS URL: $url");
+
+    final response = await http.put(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+      body: jsonEncode({"radius": radius}),
+    );
+
+    print("UPDATE RADIUS STATUS CODE: ${response.statusCode}");
+    print("UPDATE RADIUS RESPONSE: ${response.body}");
+
+    if (response.statusCode != 200 && response.statusCode != 204 && response.statusCode != 201) {
+      throw Exception("Failed to update radius filter");
+    }
+  }
+
+  Future<List<ShopModel>> getTopRatedShops() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse('${ApiConstants.api}api/grocery/shops/top-rated/');
+    print("GET TOP RATED SHOPS URL: $url");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("GET TOP RATED SHOPS STATUS: ${response.statusCode}");
+    print("GET TOP RATED SHOPS BODY: ${response.body}");
+
+    if (response.statusCode == 200) {
+      final decoded = jsonDecode(response.body);
+      final List<dynamic> items = decoded is List
+          ? decoded
+          : (decoded['results'] ?? []);
+      return items.map((e) => ShopModel.fromJson(e)).toList();
+    } else {
+      final decoded = jsonDecode(response.body);
+      String errorMessage = "Failed to load top rated shops";
       if (decoded is Map<String, dynamic>) {
         errorMessage =
             decoded['detail']?.toString() ??
@@ -2888,6 +3020,7 @@ class ApiService {
 
     final response = await http.get(
       url,
+
       headers: {
         "Content-Type": "application/json",
         "Authorization": "Bearer $token",
@@ -2912,6 +3045,42 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> getOrderPaymentStatus({required int orderId}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/orders/$orderId/payment/status/',
+    );
+    print("GET PAYMENT STATUS URL: $url");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("GET PAYMENT STATUS CODE: ${response.statusCode}");
+    print("GET PAYMENT STATUS RESPONSE: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200) {
+      return decoded is Map<String, dynamic> ? decoded : {};
+    } else {
+      String errorMessage = "Failed to load payment status";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage =
+            decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
   Future<Map<String, dynamic>> updateOrderPaymentStatus({
     required int orderId,
     required String status,
@@ -2922,7 +3091,7 @@ class ApiService {
     final url = Uri.parse(
       '${ApiConstants.api}api/grocery/orders/$orderId/payment/status/',
     );
-    final body = {"seller_payment_status": status};
+    final body = {"seller_payment_status": status.toUpperCase()};
 
     print("UPDATE PAYMENT STATUS URL: $url");
     print("UPDATE PAYMENT STATUS BODY: $body");
@@ -3348,6 +3517,92 @@ class ApiService {
     } else {
       final decoded = jsonDecode(response.body);
       String errorMessage = "Failed to load admin order details";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage =
+            decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<Map<String, dynamic>> getUnpaidPayouts({int? page}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final queryParams = <String, String>{};
+    if (page != null) queryParams['page'] = page.toString();
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/admin/payouts/pending/',
+    ).replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+
+    print("GET UNPAID PAYOUTS URL: $url");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("GET UNPAID PAYOUTS STATUS: ${response.statusCode}");
+    print("GET UNPAID PAYOUTS BODY: ${response.body}");
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode == 200) {
+      if (decoded is Map<String, dynamic>) {
+        final List resultsJson = decoded['results'] ?? [];
+        return {
+          'count': decoded['count'] ?? 0,
+          'next': decoded['next'],
+          'previous': decoded['previous'],
+          'results': List<OrderModel>.from(
+            resultsJson.map((item) => OrderModel.fromJson(item)),
+          ),
+        };
+      }
+      throw Exception("Unexpected response format");
+    } else {
+      String errorMessage = "Failed to load unpaid payouts";
+      if (decoded is Map<String, dynamic>) {
+        errorMessage =
+            decoded['detail']?.toString() ??
+            decoded['message']?.toString() ??
+            decoded.toString();
+      }
+      throw Exception(errorMessage);
+    }
+  }
+
+  Future<OrderModel> getUnpaidPayoutDetail({required int orderId}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access') ?? '';
+
+    final url = Uri.parse(
+      '${ApiConstants.api}api/grocery/admin/payouts/pending/$orderId/',
+    );
+    print("GET UNPAID PAYOUT DETAIL URL: $url");
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
+
+    print("GET UNPAID PAYOUT DETAIL STATUS: ${response.statusCode}");
+    print("GET UNPAID PAYOUT DETAIL BODY: ${response.body}");
+
+    if (response.statusCode == 200) {
+      return OrderModel.fromJson(jsonDecode(response.body));
+    } else {
+      final decoded = jsonDecode(response.body);
+      String errorMessage = "Failed to load unpaid payout details";
       if (decoded is Map<String, dynamic>) {
         errorMessage =
             decoded['detail']?.toString() ??

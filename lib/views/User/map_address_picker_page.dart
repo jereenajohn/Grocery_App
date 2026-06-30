@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:grocery_app/models/address_model.dart';
 import 'package:grocery_app/models/country_model.dart';
 import 'package:grocery_app/models/state_model.dart';
 import 'package:grocery_app/models/district_model.dart';
@@ -12,7 +13,11 @@ import 'package:grocery_app/services/api_service.dart';
 import '../widgets/shimmer_loading.dart';
 
 class MapAddressPickerPage extends StatefulWidget {
-  const MapAddressPickerPage({super.key});
+  final AddressModel? existingAddress;
+  const MapAddressPickerPage({
+    super.key,
+    this.existingAddress,
+  });
 
   @override
   State<MapAddressPickerPage> createState() => _MapAddressPickerPageState();
@@ -42,6 +47,14 @@ class _MapAddressPickerPageState extends State<MapAddressPickerPage> {
   @override
   void initState() {
     super.initState();
+    if (widget.existingAddress != null &&
+        widget.existingAddress!.latitude != null &&
+        widget.existingAddress!.longitude != null) {
+      _currentCenter = LatLng(
+        widget.existingAddress!.latitude!,
+        widget.existingAddress!.longitude!,
+      );
+    }
     // Perform initial geocoding for the default position
     _triggerReverseGeocode(_currentCenter);
   }
@@ -196,6 +209,7 @@ class _MapAddressPickerPageState extends State<MapAddressPickerPage> {
           primaryGreen: primaryGreen,
           darkGreen: darkGreen,
           lightGreen: lightGreen,
+          existingAddress: widget.existingAddress,
         );
       },
     ).then((success) {
@@ -498,6 +512,7 @@ class _AddressConfirmSheet extends StatefulWidget {
   final Color primaryGreen;
   final Color darkGreen;
   final Color lightGreen;
+  final AddressModel? existingAddress;
 
   const _AddressConfirmSheet({
     required this.geocodedData,
@@ -505,6 +520,7 @@ class _AddressConfirmSheet extends StatefulWidget {
     required this.primaryGreen,
     required this.darkGreen,
     required this.lightGreen,
+    this.existingAddress,
   });
 
   @override
@@ -632,6 +648,37 @@ class _AddressConfirmSheetState extends State<_AddressConfirmSheet> {
           }
         }
       }
+
+      // 4. Fallback to existing address if matching failed
+      if (widget.existingAddress != null) {
+        if (_selectedCountry == null) {
+          try {
+            _selectedCountry = _countries.firstWhere((c) => c.id == widget.existingAddress!.country);
+          } catch (_) {}
+        }
+
+        if (_selectedCountry != null && _states.isEmpty) {
+          final states = await widget.apiService.getStatesByCountry(countryId: _selectedCountry!.id);
+          setState(() => _states = states);
+        }
+
+        if (_selectedState == null && _selectedCountry != null) {
+          try {
+            _selectedState = _states.firstWhere((s) => s.id == widget.existingAddress!.state);
+          } catch (_) {}
+        }
+
+        if (_selectedState != null && _districts.isEmpty) {
+          final districts = await widget.apiService.getDistrictsByState(stateId: _selectedState!.id);
+          setState(() => _districts = districts);
+        }
+
+        if (_selectedDistrict == null && _selectedState != null) {
+          try {
+            _selectedDistrict = _districts.firstWhere((d) => d.id == widget.existingAddress!.district);
+          } catch (_) {}
+        }
+      }
     } catch (_) {}
     setState(() => _isLoadingDropdowns = false);
   }
@@ -680,15 +727,38 @@ class _AddressConfirmSheetState extends State<_AddressConfirmSheet> {
 
     setState(() => _isSubmitting = true);
     try {
-      final newAddr = await widget.apiService.addAddress(
-        address: _addressCtrl.text.trim(),
-        landmark: _landmarkCtrl.text.trim(),
-        city: _cityCtrl.text.trim(),
-        country: _selectedCountry!.id,
-        state: _selectedState!.id,
-        district: _selectedDistrict!.id,
-        postalCode: _postalCtrl.text.trim(),
-      );
+      final latVal = widget.geocodedData['lat'];
+      final lonVal = widget.geocodedData['lon'];
+      final double? latitude = latVal != null ? double.tryParse(latVal.toString()) : null;
+      final double? longitude = lonVal != null ? double.tryParse(lonVal.toString()) : null;
+
+      AddressModel newAddr;
+      if (widget.existingAddress != null) {
+        newAddr = await widget.apiService.updateAddress(
+          addressId: widget.existingAddress!.id,
+          address: _addressCtrl.text.trim(),
+          landmark: _landmarkCtrl.text.trim(),
+          city: _cityCtrl.text.trim(),
+          country: _selectedCountry!.id,
+          state: _selectedState!.id,
+          district: _selectedDistrict!.id,
+          postalCode: _postalCtrl.text.trim(),
+          latitude: latitude,
+          longitude: longitude,
+        );
+      } else {
+        newAddr = await widget.apiService.addAddress(
+          address: _addressCtrl.text.trim(),
+          landmark: _landmarkCtrl.text.trim(),
+          city: _cityCtrl.text.trim(),
+          country: _selectedCountry!.id,
+          state: _selectedState!.id,
+          district: _selectedDistrict!.id,
+          postalCode: _postalCtrl.text.trim(),
+          latitude: latitude,
+          longitude: longitude,
+        );
+      }
 
       // Select this address as the active primary address
       final prefs = await SharedPreferences.getInstance();

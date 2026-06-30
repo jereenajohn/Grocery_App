@@ -146,13 +146,29 @@ class _CategoryShopsPageState extends State<CategoryShopsPage> {
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 2),
                         ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.category_rounded,
-                            color: Colors.white,
-                            size: 26,
-                          ),
-                        ),
+                        child: widget.category.image != null && widget.category.image!.isNotEmpty
+                            ? ClipOval(
+                                child: Image.network(
+                                  widget.category.image!,
+                                  fit: BoxFit.cover,
+                                  width: 52,
+                                  height: 52,
+                                  errorBuilder: (ctx, err, stack) => const Center(
+                                    child: Icon(
+                                      Icons.category_rounded,
+                                      color: Colors.white,
+                                      size: 26,
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : const Center(
+                                child: Icon(
+                                  Icons.category_rounded,
+                                  color: Colors.white,
+                                  size: 26,
+                                ),
+                              ),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -477,7 +493,7 @@ class _CategoryShopsPageState extends State<CategoryShopsPage> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                '4.5',
+                                shop.avgRating?.toStringAsFixed(1) ?? 'N/A',
                                 style: TextStyle(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w800,

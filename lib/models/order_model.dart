@@ -59,6 +59,15 @@ class OrderModel {
   final String? customerPhone;
   final String? customerName;
 
+  // New fields
+  final String subtotal;
+  final String platformFee;
+  final String convenienceFee;
+  final String deliveryCharge;
+  final double amountPaid;
+  final Map<String, dynamic>? rating;
+  final Map<String, dynamic>? paymentSettlementDetails;
+
   OrderModel({
     required this.id,
     required this.orderNo,
@@ -82,6 +91,13 @@ class OrderModel {
     this.customerId,
     this.customerPhone,
     this.customerName,
+    this.subtotal = '0.00',
+    this.platformFee = '0.00',
+    this.convenienceFee = '0.00',
+    this.deliveryCharge = '0.00',
+    this.amountPaid = 0.0,
+    this.rating,
+    this.paymentSettlementDetails,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
@@ -90,11 +106,26 @@ class OrderModel {
         .map((item) => OrderItemModel.fromJson(item as Map<String, dynamic>))
         .toList();
 
+    // Check if seller_payment_details object is present (for shop order details API)
+    final sellerPaymentDetails = json['seller_payment_details'] as Map<String, dynamic>?;
+
+    final String parsedTotalPrice = json['total_price']?.toString() ?? 
+        sellerPaymentDetails?['total_payable_to_shop']?.toString() ?? 
+        '0.00';
+
+    final String parsedSubtotal = json['subtotal']?.toString() ?? 
+        sellerPaymentDetails?['subtotal']?.toString() ?? 
+        '0.00';
+
+    final String parsedDeliveryCharge = json['delivery_charge']?.toString() ?? 
+        sellerPaymentDetails?['delivery_charge']?.toString() ?? 
+        '0.00';
+
     return OrderModel(
       id: json['id'] ?? 0,
       orderNo: json['order_no'] ?? '',
       status: json['status'] ?? 'pending',
-      totalPrice: json['total_price']?.toString() ?? '0.00',
+      totalPrice: parsedTotalPrice,
       paymentMethod: json['payment_method'] ?? 0,
       paymentMethodName: json['payment_method_name'] ?? '',
       paymentRef: json['payment_ref'],
@@ -113,6 +144,13 @@ class OrderModel {
       customerId: json['customer_id'] as int?,
       customerPhone: json['customer_phone']?.toString(),
       customerName: json['customer_name']?.toString(),
+      subtotal: parsedSubtotal,
+      platformFee: json['platform_fee']?.toString() ?? '0.00',
+      convenienceFee: json['convenience_fee']?.toString() ?? '0.00',
+      deliveryCharge: parsedDeliveryCharge,
+      amountPaid: (json['amount_paid'] as num?)?.toDouble() ?? 0.0,
+      rating: json['rating'] is Map<String, dynamic> ? json['rating'] as Map<String, dynamic> : null,
+      paymentSettlementDetails: json['payment_settlement_details'] is Map<String, dynamic> ? json['payment_settlement_details'] as Map<String, dynamic> : null,
     );
   }
 }

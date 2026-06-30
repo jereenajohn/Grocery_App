@@ -76,7 +76,7 @@ class _ShopHomePageState extends State<ShopHomePage> {
         _userData = data;
         _isStoreOpen = prefs.getBool('is_store_open') ?? true;
       });
- 
+
       // Fetch latest profile asynchronously to update SharedPreferences & state
       final profile = await _apiService.getProfile();
       bool serverStatus = _isStoreOpen;
@@ -94,7 +94,7 @@ class _ShopHomePageState extends State<ShopHomePage> {
             profile['status'].toString().toLowerCase() == 'active' ||
             profile['status'] == true;
       }
- 
+
       await prefs.setBool('is_store_open', serverStatus);
       final updatedData = await _apiService.getSavedUserData();
       if (mounted) {
@@ -291,11 +291,12 @@ class _ShopHomePageState extends State<ShopHomePage> {
   Widget _buildHeader() {
     final String firstName = _userData['first_name'] ?? 'Vendor';
     final String lastName = _userData['last_name'] ?? '';
-    final String shopName = (_userData['shop_name']?.toString() ?? '').isNotEmpty
+    final String shopName =
+        (_userData['shop_name']?.toString() ?? '').isNotEmpty
         ? _userData['shop_name'].toString()
         : (firstName.toLowerCase() == 'vendor'
-            ? 'Vendor Store'
-            : '$firstName $lastName\'s Hub'.trim());
+              ? 'Vendor Store'
+              : '$firstName $lastName\'s Hub'.trim());
     final String profilePicture = _userData['profile_picture'] ?? '';
 
     return Container(
@@ -520,11 +521,12 @@ class _ShopHomePageState extends State<ShopHomePage> {
   Widget _buildSettingsView() {
     final String firstName = _userData['first_name'] ?? 'Vendor';
     final String lastName = _userData['last_name'] ?? '';
-    final String shopName = (_userData['shop_name']?.toString() ?? '').isNotEmpty
+    final String shopName =
+        (_userData['shop_name']?.toString() ?? '').isNotEmpty
         ? _userData['shop_name'].toString()
         : (firstName.toLowerCase() == 'vendor'
-            ? 'Vendor Store'
-            : '$firstName $lastName\'s Hub'.trim());
+              ? 'Vendor Store'
+              : '$firstName $lastName\'s Hub'.trim());
     final String profilePicture = _userData['profile_picture'] ?? '';
     final String email = _userData['email'] ?? 'vendor@groceryapp.com';
     final String phone = _userData['phone'] ?? '';
@@ -769,14 +771,26 @@ class _ShopHomePageState extends State<ShopHomePage> {
 
   void _showEditProfileBottomSheet() {
     final formKey = GlobalKey<FormState>();
-    final firstNameController = TextEditingController(text: _userData['first_name'] ?? '');
-    final lastNameController = TextEditingController(text: _userData['last_name'] ?? '');
-    final emailController = TextEditingController(text: _userData['email'] ?? '');
-    final shopNameController = TextEditingController(text: _userData['shop_name'] ?? '');
-    final latitudeController = TextEditingController(text: _userData['latitude'] ?? '');
-    final longitudeController = TextEditingController(text: _userData['longitude'] ?? '');
+    final firstNameController = TextEditingController(
+      text: _userData['first_name'] ?? '',
+    );
+    final lastNameController = TextEditingController(
+      text: _userData['last_name'] ?? '',
+    );
+    final emailController = TextEditingController(
+      text: _userData['email'] ?? '',
+    );
+    final shopNameController = TextEditingController(
+      text: _userData['shop_name'] ?? '',
+    );
+    final latitudeController = TextEditingController(
+      text: _userData['latitude'] ?? '',
+    );
+    final longitudeController = TextEditingController(
+      text: _userData['longitude'] ?? '',
+    );
     bool isOpen = _userData['is_open'] ?? _isStoreOpen;
-    
+
     File? selectedImage;
     final picker = ImagePicker();
 
@@ -802,42 +816,73 @@ class _ShopHomePageState extends State<ShopHomePage> {
               try {
                 final res = await _apiService.getCountries();
                 countriesList = List<CountryModel>.from(res['results'] ?? []);
-                
+
                 final countryVal = _userData['country'];
                 final countryNameVal = _userData['country_name'];
-                if ((countryVal != null && countryVal != 0) || (countryNameVal != null && countryNameVal.toString().isNotEmpty)) {
+                if ((countryVal != null && countryVal != 0) ||
+                    (countryNameVal != null &&
+                        countryNameVal.toString().isNotEmpty)) {
                   for (var c in countriesList) {
-                    if ((countryVal != null && countryVal != 0 && c.id == countryVal) ||
-                        (countryNameVal != null && c.name.trim().toLowerCase() == countryNameVal.toString().trim().toLowerCase())) {
+                    if ((countryVal != null &&
+                            countryVal != 0 &&
+                            c.id == countryVal) ||
+                        (countryNameVal != null &&
+                            c.name.trim().toLowerCase() ==
+                                countryNameVal
+                                    .toString()
+                                    .trim()
+                                    .toLowerCase())) {
                       selectedCountry = c;
                       break;
                     }
                   }
                 }
-                
+
                 if (selectedCountry != null) {
-                  statesList = await _apiService.getStatesByCountry(countryId: selectedCountry!.id);
+                  statesList = await _apiService.getStatesByCountry(
+                    countryId: selectedCountry!.id,
+                  );
                   final stateVal = _userData['state'];
                   final stateNameVal = _userData['state_name'];
-                  if ((stateVal != null && stateVal != 0) || (stateNameVal != null && stateNameVal.toString().isNotEmpty)) {
+                  if ((stateVal != null && stateVal != 0) ||
+                      (stateNameVal != null &&
+                          stateNameVal.toString().isNotEmpty)) {
                     for (var s in statesList) {
-                      if ((stateVal != null && stateVal != 0 && s.id == stateVal) ||
-                          (stateNameVal != null && s.name.trim().toLowerCase() == stateNameVal.toString().trim().toLowerCase())) {
+                      if ((stateVal != null &&
+                              stateVal != 0 &&
+                              s.id == stateVal) ||
+                          (stateNameVal != null &&
+                              s.name.trim().toLowerCase() ==
+                                  stateNameVal
+                                      .toString()
+                                      .trim()
+                                      .toLowerCase())) {
                         selectedState = s;
                         break;
                       }
                     }
                   }
                 }
-                
+
                 if (selectedState != null) {
-                  districtsList = await _apiService.getDistrictsByState(stateId: selectedState!.id);
+                  districtsList = await _apiService.getDistrictsByState(
+                    stateId: selectedState!.id,
+                  );
                   final districtVal = _userData['district'];
                   final districtNameVal = _userData['district_name'];
-                  if ((districtVal != null && districtVal != 0) || (districtNameVal != null && districtNameVal.toString().isNotEmpty)) {
+                  if ((districtVal != null && districtVal != 0) ||
+                      (districtNameVal != null &&
+                          districtNameVal.toString().isNotEmpty)) {
                     for (var d in districtsList) {
-                      if ((districtVal != null && districtVal != 0 && d.id == districtVal) ||
-                          (districtNameVal != null && d.name.trim().toLowerCase() == districtNameVal.toString().trim().toLowerCase())) {
+                      if ((districtVal != null &&
+                              districtVal != 0 &&
+                              d.id == districtVal) ||
+                          (districtNameVal != null &&
+                              d.name.trim().toLowerCase() ==
+                                  districtNameVal
+                                      .toString()
+                                      .trim()
+                                      .toLowerCase())) {
                         selectedDistrict = d;
                         break;
                       }
@@ -864,7 +909,9 @@ class _ShopHomePageState extends State<ShopHomePage> {
               });
               if (country != null) {
                 try {
-                  final list = await _apiService.getStatesByCountry(countryId: country.id);
+                  final list = await _apiService.getStatesByCountry(
+                    countryId: country.id,
+                  );
                   setModalState(() {
                     statesList = list;
                     isLoadingLocations = false;
@@ -890,7 +937,9 @@ class _ShopHomePageState extends State<ShopHomePage> {
               });
               if (state != null) {
                 try {
-                  final list = await _apiService.getDistrictsByState(stateId: state.id);
+                  final list = await _apiService.getDistrictsByState(
+                    stateId: state.id,
+                  );
                   setModalState(() {
                     districtsList = list;
                     isLoadingLocations = false;
@@ -970,12 +1019,18 @@ class _ShopHomePageState extends State<ShopHomePage> {
                                       color: lightGreen,
                                       shape: BoxShape.circle,
                                     ),
-                                    child: Icon(Icons.camera_alt_rounded, color: primaryGreen, size: 30),
+                                    child: Icon(
+                                      Icons.camera_alt_rounded,
+                                      color: primaryGreen,
+                                      size: 30,
+                                    ),
                                   ),
                                   const SizedBox(height: 8),
                                   const Text(
                                     'Camera',
-                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -1007,12 +1062,18 @@ class _ShopHomePageState extends State<ShopHomePage> {
                                       color: lightGreen,
                                       shape: BoxShape.circle,
                                     ),
-                                    child: Icon(Icons.photo_library_rounded, color: primaryGreen, size: 30),
+                                    child: Icon(
+                                      Icons.photo_library_rounded,
+                                      color: primaryGreen,
+                                      size: 30,
+                                    ),
                                   ),
                                   const SizedBox(height: 8),
                                   const Text(
                                     'Gallery',
-                                    style: TextStyle(fontWeight: FontWeight.bold),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -1105,18 +1166,38 @@ class _ShopHomePageState extends State<ShopHomePage> {
                               Container(
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: primaryGreen, width: 3),
+                                  border: Border.all(
+                                    color: primaryGreen,
+                                    width: 3,
+                                  ),
                                 ),
                                 child: CircleAvatar(
                                   radius: 50,
                                   backgroundColor: Colors.white,
                                   backgroundImage: selectedImage != null
-                                      ? FileImage(selectedImage!) as ImageProvider
-                                      : (_userData['profile_picture'] != null && _userData['profile_picture'].toString().isNotEmpty
-                                          ? NetworkImage(_userData['profile_picture']) as ImageProvider
-                                          : null),
-                                  child: selectedImage == null && (_userData['profile_picture'] == null || _userData['profile_picture'].toString().isEmpty)
-                                      ? Icon(Icons.storefront_rounded, size: 50, color: Colors.grey.shade400)
+                                      ? FileImage(selectedImage!)
+                                            as ImageProvider
+                                      : (_userData['profile_picture'] != null &&
+                                                _userData['profile_picture']
+                                                    .toString()
+                                                    .isNotEmpty
+                                            ? NetworkImage(
+                                                    _userData['profile_picture'],
+                                                  )
+                                                  as ImageProvider
+                                            : null),
+                                  child:
+                                      selectedImage == null &&
+                                          (_userData['profile_picture'] ==
+                                                  null ||
+                                              _userData['profile_picture']
+                                                  .toString()
+                                                  .isEmpty)
+                                      ? Icon(
+                                          Icons.storefront_rounded,
+                                          size: 50,
+                                          color: Colors.grey.shade400,
+                                        )
                                       : null,
                                 ),
                               ),
@@ -1159,18 +1240,28 @@ class _ShopHomePageState extends State<ShopHomePage> {
                             hintText: 'Enter your first name',
                             fillColor: Colors.white,
                             filled: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(color: Colors.green.shade100),
+                              borderSide: BorderSide(
+                                color: Colors.green.shade100,
+                              ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(color: Colors.green.shade100),
+                              borderSide: BorderSide(
+                                color: Colors.green.shade100,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(color: primaryGreen, width: 1.5),
+                              borderSide: BorderSide(
+                                color: primaryGreen,
+                                width: 1.5,
+                              ),
                             ),
                           ),
                           validator: (value) {
@@ -1197,18 +1288,28 @@ class _ShopHomePageState extends State<ShopHomePage> {
                             hintText: 'Enter your last name',
                             fillColor: Colors.white,
                             filled: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(color: Colors.green.shade100),
+                              borderSide: BorderSide(
+                                color: Colors.green.shade100,
+                              ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(color: Colors.green.shade100),
+                              borderSide: BorderSide(
+                                color: Colors.green.shade100,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(color: primaryGreen, width: 1.5),
+                              borderSide: BorderSide(
+                                color: primaryGreen,
+                                width: 1.5,
+                              ),
                             ),
                           ),
                           validator: (value) {
@@ -1235,18 +1336,28 @@ class _ShopHomePageState extends State<ShopHomePage> {
                             hintText: 'Enter your shop name',
                             fillColor: Colors.white,
                             filled: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(color: Colors.green.shade100),
+                              borderSide: BorderSide(
+                                color: Colors.green.shade100,
+                              ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(color: Colors.green.shade100),
+                              borderSide: BorderSide(
+                                color: Colors.green.shade100,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(color: primaryGreen, width: 1.5),
+                              borderSide: BorderSide(
+                                color: primaryGreen,
+                                width: 1.5,
+                              ),
                             ),
                           ),
                           validator: (value) {
@@ -1274,18 +1385,28 @@ class _ShopHomePageState extends State<ShopHomePage> {
                             hintText: 'Enter your email address',
                             fillColor: Colors.white,
                             filled: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(color: Colors.green.shade100),
+                              borderSide: BorderSide(
+                                color: Colors.green.shade100,
+                              ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(color: Colors.green.shade100),
+                              borderSide: BorderSide(
+                                color: Colors.green.shade100,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(color: primaryGreen, width: 1.5),
+                              borderSide: BorderSide(
+                                color: primaryGreen,
+                                width: 1.5,
+                              ),
                             ),
                           ),
                           validator: (value) {
@@ -1315,22 +1436,35 @@ class _ShopHomePageState extends State<ShopHomePage> {
                                 value: selectedCountry?.id,
                                 dropdownColor: Colors.white,
                                 isExpanded: true,
-                                style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black87),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
                                 decoration: InputDecoration(
                                   fillColor: Colors.white,
                                   filled: true,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 14,
+                                  ),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
-                                    borderSide: BorderSide(color: Colors.green.shade100),
+                                    borderSide: BorderSide(
+                                      color: Colors.green.shade100,
+                                    ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
-                                    borderSide: BorderSide(color: Colors.green.shade100),
+                                    borderSide: BorderSide(
+                                      color: Colors.green.shade100,
+                                    ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
-                                    borderSide: BorderSide(color: primaryGreen, width: 1.5),
+                                    borderSide: BorderSide(
+                                      color: primaryGreen,
+                                      width: 1.5,
+                                    ),
                                   ),
                                 ),
                                 items: countriesList.map((c) {
@@ -1341,11 +1475,15 @@ class _ShopHomePageState extends State<ShopHomePage> {
                                 }).toList(),
                                 onChanged: (val) {
                                   if (val != null) {
-                                    final c = countriesList.firstWhere((x) => x.id == val);
+                                    final c = countriesList.firstWhere(
+                                      (x) => x.id == val,
+                                    );
                                     onCountryChanged(c);
                                   }
                                 },
-                                validator: (value) => value == null ? 'Country is required' : null,
+                                validator: (value) => value == null
+                                    ? 'Country is required'
+                                    : null,
                               ),
                         const SizedBox(height: 16),
                         Text(
@@ -1363,22 +1501,35 @@ class _ShopHomePageState extends State<ShopHomePage> {
                                 value: selectedState?.id,
                                 dropdownColor: Colors.white,
                                 isExpanded: true,
-                                style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black87),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
                                 decoration: InputDecoration(
                                   fillColor: Colors.white,
                                   filled: true,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 14,
+                                  ),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
-                                    borderSide: BorderSide(color: Colors.green.shade100),
+                                    borderSide: BorderSide(
+                                      color: Colors.green.shade100,
+                                    ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
-                                    borderSide: BorderSide(color: Colors.green.shade100),
+                                    borderSide: BorderSide(
+                                      color: Colors.green.shade100,
+                                    ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
-                                    borderSide: BorderSide(color: primaryGreen, width: 1.5),
+                                    borderSide: BorderSide(
+                                      color: primaryGreen,
+                                      width: 1.5,
+                                    ),
                                   ),
                                 ),
                                 items: statesList.map((s) {
@@ -1389,11 +1540,14 @@ class _ShopHomePageState extends State<ShopHomePage> {
                                 }).toList(),
                                 onChanged: (val) {
                                   if (val != null) {
-                                    final s = statesList.firstWhere((x) => x.id == val);
+                                    final s = statesList.firstWhere(
+                                      (x) => x.id == val,
+                                    );
                                     onStateChanged(s);
                                   }
                                 },
-                                validator: (value) => value == null ? 'State is required' : null,
+                                validator: (value) =>
+                                    value == null ? 'State is required' : null,
                               ),
                         const SizedBox(height: 16),
                         Text(
@@ -1411,22 +1565,35 @@ class _ShopHomePageState extends State<ShopHomePage> {
                                 value: selectedDistrict?.id,
                                 dropdownColor: Colors.white,
                                 isExpanded: true,
-                                style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black87),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
                                 decoration: InputDecoration(
                                   fillColor: Colors.white,
                                   filled: true,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 14,
+                                  ),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
-                                    borderSide: BorderSide(color: Colors.green.shade100),
+                                    borderSide: BorderSide(
+                                      color: Colors.green.shade100,
+                                    ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
-                                    borderSide: BorderSide(color: Colors.green.shade100),
+                                    borderSide: BorderSide(
+                                      color: Colors.green.shade100,
+                                    ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(14),
-                                    borderSide: BorderSide(color: primaryGreen, width: 1.5),
+                                    borderSide: BorderSide(
+                                      color: primaryGreen,
+                                      width: 1.5,
+                                    ),
                                   ),
                                 ),
                                 items: districtsList.map((d) {
@@ -1437,13 +1604,17 @@ class _ShopHomePageState extends State<ShopHomePage> {
                                 }).toList(),
                                 onChanged: (val) {
                                   if (val != null) {
-                                    final d = districtsList.firstWhere((x) => x.id == val);
+                                    final d = districtsList.firstWhere(
+                                      (x) => x.id == val,
+                                    );
                                     setModalState(() {
                                       selectedDistrict = d;
                                     });
                                   }
                                 },
-                                validator: (value) => value == null ? 'District is required' : null,
+                                validator: (value) => value == null
+                                    ? 'District is required'
+                                    : null,
                               ),
                         const SizedBox(height: 16),
                         Text(
@@ -1457,8 +1628,12 @@ class _ShopHomePageState extends State<ShopHomePage> {
                         const SizedBox(height: 8),
                         Builder(
                           builder: (context) {
-                            double lat = double.tryParse(latitudeController.text) ?? 9.9312;
-                            double lng = double.tryParse(longitudeController.text) ?? 76.2673;
+                            double lat =
+                                double.tryParse(latitudeController.text) ??
+                                9.9312;
+                            double lng =
+                                double.tryParse(longitudeController.text) ??
+                                76.2673;
                             LatLng shopLatLng = LatLng(lat, lng);
 
                             return Container(
@@ -1466,7 +1641,10 @@ class _ShopHomePageState extends State<ShopHomePage> {
                               width: double.infinity,
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Colors.green.shade100, width: 1.5),
+                                border: Border.all(
+                                  color: Colors.green.shade100,
+                                  width: 1.5,
+                                ),
                               ),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(15),
@@ -1477,14 +1655,17 @@ class _ShopHomePageState extends State<ShopHomePage> {
                                       options: MapOptions(
                                         initialCenter: shopLatLng,
                                         initialZoom: 14.0,
-                                        interactionOptions: const InteractionOptions(
-                                          flags: InteractiveFlag.none,
-                                        ),
+                                        interactionOptions:
+                                            const InteractionOptions(
+                                              flags: InteractiveFlag.none,
+                                            ),
                                       ),
                                       children: [
                                         TileLayer(
-                                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                          userAgentPackageName: 'com.example.grocery_app',
+                                          urlTemplate:
+                                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                          userAgentPackageName:
+                                              'com.example.grocery_app',
                                         ),
                                         MarkerLayer(
                                           markers: [
@@ -1508,19 +1689,32 @@ class _ShopHomePageState extends State<ShopHomePage> {
                                         color: Colors.transparent,
                                         child: InkWell(
                                           onTap: () async {
-                                            final LatLng? result = await Navigator.push(
+                                            final LatLng?
+                                            result = await Navigator.push(
                                               context,
                                               MaterialPageRoute(
-                                                builder: (context) => MapLocationPicker(
-                                                  initialLatitude: double.tryParse(latitudeController.text),
-                                                  initialLongitude: double.tryParse(longitudeController.text),
-                                                ),
+                                                builder: (context) =>
+                                                    MapLocationPicker(
+                                                      initialLatitude:
+                                                          double.tryParse(
+                                                            latitudeController
+                                                                .text,
+                                                          ),
+                                                      initialLongitude:
+                                                          double.tryParse(
+                                                            longitudeController
+                                                                .text,
+                                                          ),
+                                                    ),
                                               ),
                                             );
                                             if (result != null) {
                                               setModalState(() {
-                                                latitudeController.text = result.latitude.toString();
-                                                longitudeController.text = result.longitude.toString();
+                                                latitudeController.text = result
+                                                    .latitude
+                                                    .toString();
+                                                longitudeController.text =
+                                                    result.longitude.toString();
                                               });
                                             }
                                           },
@@ -1532,13 +1726,20 @@ class _ShopHomePageState extends State<ShopHomePage> {
                                       bottom: 8,
                                       right: 8,
                                       child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 6,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: primaryGreen,
-                                          borderRadius: BorderRadius.circular(20),
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.black.withOpacity(0.2),
+                                              color: Colors.black.withOpacity(
+                                                0.2,
+                                              ),
                                               blurRadius: 4,
                                             ),
                                           ],
@@ -1546,7 +1747,11 @@ class _ShopHomePageState extends State<ShopHomePage> {
                                         child: const Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Icon(Icons.edit_location_alt_rounded, color: Colors.white, size: 14),
+                                            Icon(
+                                              Icons.edit_location_alt_rounded,
+                                              color: Colors.white,
+                                              size: 14,
+                                            ),
                                             SizedBox(width: 4),
                                             Text(
                                               'Tap to Edit',
@@ -1564,7 +1769,7 @@ class _ShopHomePageState extends State<ShopHomePage> {
                                 ),
                               ),
                             );
-                          }
+                          },
                         ),
                         const SizedBox(height: 16),
                         // Shop Open Status Toggle
@@ -1603,31 +1808,43 @@ class _ShopHomePageState extends State<ShopHomePage> {
                                         isSaving = true;
                                       });
                                       try {
-                                        final userId = _userData['user_id'] ?? 0;
+                                        final userId =
+                                            _userData['user_id'] ?? 0;
                                         await _apiService.updateProfile(
                                           userId: userId,
-                                          firstName: firstNameController.text.trim(),
-                                          lastName: lastNameController.text.trim(),
+                                          firstName: firstNameController.text
+                                              .trim(),
+                                          lastName: lastNameController.text
+                                              .trim(),
                                           email: emailController.text.trim(),
-                                          shopName: shopNameController.text.trim(),
+                                          shopName: shopNameController.text
+                                              .trim(),
                                           country: selectedCountry?.id,
                                           state: selectedState?.id,
                                           district: selectedDistrict?.id,
-                                          latitude: latitudeController.text.trim(),
-                                          longitude: longitudeController.text.trim(),
+                                          latitude: latitudeController.text
+                                              .trim(),
+                                          longitude: longitudeController.text
+                                              .trim(),
                                           isOpen: isOpen,
                                           profilePicture: selectedImage,
                                         );
                                         await _loadUserData();
                                         if (mounted) {
                                           Navigator.pop(context);
-                                          ScaffoldMessenger.of(context).showSnackBar(
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
                                             SnackBar(
-                                              content: const Text('Profile updated successfully!'),
+                                              content: const Text(
+                                                'Profile updated successfully!',
+                                              ),
                                               backgroundColor: primaryGreen,
-                                              behavior: SnackBarBehavior.floating,
+                                              behavior:
+                                                  SnackBarBehavior.floating,
                                               shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(10),
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
                                               ),
                                             ),
                                           );
@@ -1637,13 +1854,22 @@ class _ShopHomePageState extends State<ShopHomePage> {
                                           isSaving = false;
                                         });
                                         if (mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
                                             SnackBar(
-                                              content: Text(e.toString().replaceAll('Exception: ', '')),
+                                              content: Text(
+                                                e.toString().replaceAll(
+                                                  'Exception: ',
+                                                  '',
+                                                ),
+                                              ),
                                               backgroundColor: Colors.redAccent,
-                                              behavior: SnackBarBehavior.floating,
+                                              behavior:
+                                                  SnackBarBehavior.floating,
                                               shape: RoundedRectangleBorder(
-                                                borderRadius: BorderRadius.circular(10),
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
                                               ),
                                             ),
                                           );
@@ -3001,7 +3227,7 @@ class _ShopHomePageState extends State<ShopHomePage> {
                                   ),
                                 ],
                               ),
-                              _paymentMethodBadge(order.paymentMethodName),
+                              // _paymentMethodBadge(order.paymentMethodName),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
@@ -3360,7 +3586,8 @@ class _ShopHomePageState extends State<ShopHomePage> {
       },
     );
     if (picked != null) {
-      if (picked.start != _selectedStartDate || picked.end != _selectedEndDate) {
+      if (picked.start != _selectedStartDate ||
+          picked.end != _selectedEndDate) {
         setState(() {
           _selectedStartDate = picked.start;
           _selectedEndDate = picked.end;
@@ -3511,10 +3738,7 @@ class _ShopHomePageState extends State<ShopHomePage> {
         children: [
           Container(
             padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: bgColor,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
             child: Icon(icon, color: color, size: 16),
           ),
           const SizedBox(height: 8),
@@ -3609,7 +3833,10 @@ class _ShopHomePageState extends State<ShopHomePage> {
                     children: [
                       CustomPaint(
                         size: const Size(120, 120),
-                        painter: PieChartPainter(values: values, colors: colors),
+                        painter: PieChartPainter(
+                          values: values,
+                          colors: colors,
+                        ),
                       ),
                       Column(
                         mainAxisSize: MainAxisSize.min,
@@ -3644,7 +3871,7 @@ class _ShopHomePageState extends State<ShopHomePage> {
                   children: List.generate(values.length, (index) {
                     final val = values[index].toInt();
                     if (val == 0 && total > 0) return const SizedBox.shrink();
-                    
+
                     double percentage = total > 0 ? (val / total) * 100 : 0.0;
 
                     return Padding(
@@ -3880,6 +4107,13 @@ class _ShopOrderDetailBottomSheetState
           createdAt: _detail!.createdAt,
           updatedAt: _detail!.updatedAt,
           sellerPaymentStatus: _detail!.sellerPaymentStatus,
+          subtotal: _detail!.subtotal,
+          platformFee: _detail!.platformFee,
+          convenienceFee: _detail!.convenienceFee,
+          deliveryCharge: _detail!.deliveryCharge,
+          amountPaid: _detail!.amountPaid,
+          rating: _detail!.rating,
+          paymentSettlementDetails: _detail!.paymentSettlementDetails,
         );
         _updatingOrderStatus = false;
       });
@@ -4156,6 +4390,36 @@ class _ShopOrderDetailBottomSheetState
                     color: Color(0xFFE8F5E9),
                   ),
                 ),
+                _priceSummaryRow('Subtotal', '₹${order.subtotal}'),
+                if (double.tryParse(order.platformFee) != null &&
+                    double.parse(order.platformFee) > 0) ...[
+                  const SizedBox(height: 6),
+                  _priceSummaryRow('Platform Fee', '₹${order.platformFee}'),
+                ],
+                if (double.tryParse(order.convenienceFee) != null &&
+                    double.parse(order.convenienceFee) > 0) ...[
+                  const SizedBox(height: 6),
+                  _priceSummaryRow(
+                    'Convenience Fee',
+                    '₹${order.convenienceFee}',
+                  ),
+                ],
+                if (double.tryParse(order.deliveryCharge) != null &&
+                    double.parse(order.deliveryCharge) > 0) ...[
+                  const SizedBox(height: 6),
+                  _priceSummaryRow(
+                    'Delivery Charge',
+                    '₹${order.deliveryCharge}',
+                  ),
+                ],
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 10),
+                  child: Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: Color(0xFFE8F5E9),
+                  ),
+                ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -4173,6 +4437,35 @@ class _ShopOrderDetailBottomSheetState
                         fontSize: 18,
                         color: widget.primaryGreen,
                       ),
+                    ),
+                  ],
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 10),
+                  child: Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: Color(0xFFE8F5E9),
+                  ),
+                ),
+                if (order.paymentRef != null &&
+                    order.paymentRef!.isNotEmpty) ...[
+                  _priceSummaryRow('Payment Ref ID', order.paymentRef!),
+                  const SizedBox(height: 6),
+                ],
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Payout Status',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    widget.sellerPaymentStatusBadge(
+                      order.sellerPaymentStatus ?? 'PENDING',
                     ),
                   ],
                 ),
@@ -4212,75 +4505,62 @@ class _ShopOrderDetailBottomSheetState
               ],
             ),
           ),
-          _sectionCard(
-            title: 'PAYMENT & PAYOUT DETAIL',
-            icon: Icons.payment_rounded,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _infoRow(
-                  Icons.account_balance_wallet_rounded,
-                  'Method',
-                  order.paymentMethodName,
-                ),
-                if (order.paymentRef != null && order.paymentRef!.isNotEmpty)
-                  _infoRow(
-                    Icons.tag_rounded,
-                    'Payment Ref ID',
-                    order.paymentRef!,
-                    isCopyable: true,
+          if (order.rating != null)
+            _sectionCard(
+              title: 'CUSTOMER FEEDBACK',
+              icon: Icons.star_rounded,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Row(
+                        children: List.generate(5, (index) {
+                          final int score = order.rating!['rating'] ?? 0;
+                          return Icon(
+                            index < score
+                                ? Icons.star_rounded
+                                : Icons.star_outline_rounded,
+                            color: const Color(0xFFFFB300),
+                            size: 20,
+                          );
+                        }),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '(${order.rating!['rating']}/5)',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
                   ),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                  if (order.rating!['review'] != null &&
+                      order.rating!['review'].toString().isNotEmpty) ...[
+                    const SizedBox(height: 10),
                     Container(
-                      padding: const EdgeInsets.all(6),
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: widget.lightGreen,
-                        shape: BoxShape.circle,
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade100),
                       ),
-                      child: Icon(
-                        Icons.monetization_on_rounded,
-                        color: widget.primaryGreen,
-                        size: 14,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Payout Status',
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              color: Colors.grey.shade400,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          widget.sellerPaymentStatusBadge(
-                            order.sellerPaymentStatus ?? 'PENDING',
-                          ),
-                        ],
+                      child: Text(
+                        '"${order.rating!['review']}"',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade600,
+                          fontStyle: FontStyle.italic,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 14),
-                _infoRow(
-                  Icons.calendar_today_rounded,
-                  'Placed At',
-                  widget.formatDateTime(order.createdAt),
-                ),
-                _infoRow(
-                  Icons.update_rounded,
-                  'Last Updated',
-                  widget.formatDateTime(order.updatedAt),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -4473,6 +4753,33 @@ class _ShopOrderDetailBottomSheetState
                   ],
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _priceSummaryRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              color: Colors.grey.shade800,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -5254,7 +5561,10 @@ class PieChartPainter extends CustomPainter {
     final int nonZeroSlices = values.where((v) => v > 0).length;
     double startAngle = -3.1415926535 / 2; // Start from top
     final double radius = size.width / 2;
-    final Rect rect = Rect.fromCircle(center: size.center(Offset.zero), radius: radius - 10);
+    final Rect rect = Rect.fromCircle(
+      center: size.center(Offset.zero),
+      radius: radius - 10,
+    );
 
     for (int i = 0; i < values.length; i++) {
       if (values[i] == 0) continue;
@@ -5266,8 +5576,16 @@ class PieChartPainter extends CustomPainter {
         ..strokeWidth = 14
         ..strokeCap = StrokeCap.round;
 
-      final double adjustSweep = nonZeroSlices > 1 ? sweepAngle - 0.12 : sweepAngle;
-      canvas.drawArc(rect, startAngle + (nonZeroSlices > 1 ? 0.06 : 0), adjustSweep, false, paint);
+      final double adjustSweep = nonZeroSlices > 1
+          ? sweepAngle - 0.12
+          : sweepAngle;
+      canvas.drawArc(
+        rect,
+        startAngle + (nonZeroSlices > 1 ? 0.06 : 0),
+        adjustSweep,
+        false,
+        paint,
+      );
       startAngle += sweepAngle;
     }
   }

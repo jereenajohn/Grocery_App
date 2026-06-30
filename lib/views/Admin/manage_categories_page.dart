@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../widgets/shimmer_loading.dart';
 import '../../services/api_service.dart';
 import '../../models/category_model.dart';
@@ -20,6 +22,244 @@ class _ManageCategoriesPageState extends State<ManageCategoriesPage> {
 
   List<CategoryModel> _categories = [];
   bool _isLoading = false;
+
+  Future<File?> _pickImage(ImageSource source) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: source,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
+    if (picked != null) {
+      return File(picked.path);
+    }
+    return null;
+  }
+
+  void _showImageSourcePicker({
+    required void Function(File) onPicked,
+    required StateSetter setDialogState,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Text(
+                'Select Image Source',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _imageSourceOption(
+                    icon: Icons.camera_alt_rounded,
+                    label: 'Camera',
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      final file = await _pickImage(ImageSource.camera);
+                      if (file != null) onPicked(file);
+                    },
+                  ),
+                  _imageSourceOption(
+                    icon: Icons.photo_library_rounded,
+                    label: 'Gallery',
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      final file = await _pickImage(ImageSource.gallery);
+                      if (file != null) onPicked(file);
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _imageSourceOption({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: lightGreen,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Icon(icon, color: primaryGreen, size: 30),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              color: Colors.grey.shade700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImagePickerWidget({
+    File? selectedImage,
+    String? existingImageUrl,
+    required VoidCallback onTap,
+    required VoidCallback onClear,
+  }) {
+    final hasImage =
+        selectedImage != null ||
+        (existingImageUrl != null && existingImageUrl.isNotEmpty);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Category Image',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+            color: Color(0xFF1E1E1E),
+          ),
+        ),
+        const SizedBox(height: 6),
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            height: 140,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: lightGreen.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: hasImage
+                    ? primaryGreen.withOpacity(0.3)
+                    : Colors.grey.shade200,
+                width: hasImage ? 1.5 : 1,
+              ),
+            ),
+            child: hasImage
+                ? Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(15),
+                        child: selectedImage != null
+                            ? Image.file(
+                                selectedImage,
+                                width: double.infinity,
+                                height: 140,
+                                fit: BoxFit.cover,
+                              )
+                            : Image.network(
+                                existingImageUrl!,
+                                width: double.infinity,
+                                height: 140,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Center(
+                                  child: Icon(
+                                    Icons.broken_image_rounded,
+                                    color: Colors.grey.shade400,
+                                    size: 40,
+                                  ),
+                                ),
+                              ),
+                      ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: GestureDetector(
+                          onTap: onClear,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.6),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close_rounded,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.6),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            'Change',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.add_photo_alternate_rounded,
+                        size: 36,
+                        color: primaryGreen.withOpacity(0.5),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tap to add category image',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
 
   @override
   void initState() {
@@ -55,6 +295,8 @@ class _ManageCategoriesPageState extends State<ManageCategoriesPage> {
     final descController = TextEditingController(text: category?.description ?? '');
     final formKey = GlobalKey<FormState>();
     bool isSaving = false;
+    File? selectedImage;
+    String? existingImageUrl = category?.image;
 
     showDialog(
       context: context,
@@ -75,45 +317,67 @@ class _ManageCategoriesPageState extends State<ManageCategoriesPage> {
               ),
             ],
           ),
-          content: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: nameController,
-                  autofocus: true,
-                  decoration: InputDecoration(
-                    labelText: 'Category Name',
-                    prefixIcon: Icon(Icons.category_rounded, color: primaryGreen),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: primaryGreen, width: 1.8),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildImagePickerWidget(
+                    selectedImage: selectedImage,
+                    existingImageUrl: existingImageUrl,
+                    onTap: () => _showImageSourcePicker(
+                      setDialogState: setDialogState,
+                      onPicked: (file) {
+                        setDialogState(() {
+                          selectedImage = file;
+                          existingImageUrl = null;
+                        });
+                      },
+                    ),
+                    onClear: () {
+                      setDialogState(() {
+                        selectedImage = null;
+                        existingImageUrl = null;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: nameController,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      labelText: 'Category Name',
+                      prefixIcon: Icon(Icons.category_rounded, color: primaryGreen),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(color: primaryGreen, width: 1.8),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Enter category name';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: descController,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      labelText: 'Description',
+                      prefixIcon: Icon(Icons.description_rounded, color: primaryGreen),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(color: primaryGreen, width: 1.8),
+                      ),
                     ),
                   ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Enter category name';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: descController,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    labelText: 'Description',
-                    prefixIcon: Icon(Icons.description_rounded, color: primaryGreen),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: primaryGreen, width: 1.8),
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           actions: [
@@ -139,14 +403,16 @@ class _ManageCategoriesPageState extends State<ManageCategoriesPage> {
                       try {
                         if (isEditing) {
                           await _apiService.updateCategory(
-                            id: category!.id,
+                            id: category.id,
                             name: nameController.text.trim(),
                             description: descController.text.trim(),
+                            image: selectedImage,
                           );
                         } else {
                           await _apiService.addCategory(
                             name: nameController.text.trim(),
                             description: descController.text.trim(),
+                            image: selectedImage,
                           );
                         }
 
@@ -359,7 +625,12 @@ class _ManageCategoriesPageState extends State<ManageCategoriesPage> {
               CircleAvatar(
                 radius: 22,
                 backgroundColor: lightGreen,
-                child: Icon(Icons.category_rounded, color: primaryGreen, size: 22),
+                backgroundImage: cat.image != null && cat.image!.isNotEmpty
+                    ? NetworkImage(cat.image!)
+                    : null,
+                child: cat.image == null || cat.image!.isEmpty
+                    ? Icon(Icons.category_rounded, color: primaryGreen, size: 22)
+                    : null,
               ),
               const SizedBox(width: 14),
               Expanded(

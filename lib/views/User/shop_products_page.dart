@@ -3,6 +3,7 @@ import '../widgets/shimmer_loading.dart';
 import '../../models/product_model.dart';
 import '../../models/shop_model.dart';
 import '../../services/api_service.dart';
+import 'cart_page.dart';
 
 class ShopProductsPage extends StatefulWidget {
   final ShopModel shop;
@@ -24,11 +25,13 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
   List<ProductModel> _products = [];
   bool _isLoading = true;
   String? _error;
+  int _cartCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadProducts();
+    _loadCartCount();
     if (!widget.shop.isOpen) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -66,6 +69,17 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _loadCartCount() async {
+    try {
+      final cart = await _apiService.getCart();
+      if (mounted) {
+        setState(() {
+          _cartCount = cart.length;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -114,6 +128,49 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
           ],
         ],
       ),
+      floatingActionButton: _cartCount > 0
+          ? FloatingActionButton(
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CartPage()),
+                );
+                _loadCartCount();
+              },
+              backgroundColor: primaryGreen,
+              foregroundColor: Colors.white,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(Icons.shopping_cart_rounded, size: 28),
+                  Positioned(
+                    right: -6,
+                    top: -6,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        '$_cartCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : null,
     );
   }
 
@@ -645,6 +702,7 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
           await _apiService.addToCart(productId: product.id, quantity: 1);
           await _apiService.setCartShopId(widget.shop.id);
           await _apiService.setCartShopName(widget.shop.shop_name);
+          _loadCartCount();
           if (mounted) {
             Navigator.pop(context); // Dismiss loading spinner
             ScaffoldMessenger.of(context).showSnackBar(
@@ -678,6 +736,7 @@ class _ShopProductsPageState extends State<ShopProductsPage> {
         await _apiService.addToCart(productId: product.id, quantity: 1);
         await _apiService.setCartShopId(widget.shop.id);
         await _apiService.setCartShopName(widget.shop.shop_name);
+        _loadCartCount();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
