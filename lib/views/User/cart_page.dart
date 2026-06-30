@@ -10,6 +10,7 @@ import '../../models/state_model.dart';
 import '../../models/district_model.dart';
 import '../../services/api_service.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'orders_page.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -70,6 +71,8 @@ class _CartPageState extends State<CartPage> {
   double _convenienceFee = 0.0;
   double _deliveryCharge = 0.0;
   double _amountPayable = 0.0;
+  double _amountNeededForFreeDelivery = 0.0;
+  String _freeDeliveryMessage = '';
 
 
   @override
@@ -148,6 +151,8 @@ class _CartPageState extends State<CartPage> {
         _convenienceFee = double.tryParse(summary['convenience_fee']?.toString() ?? '0.0') ?? 0.0;
         _deliveryCharge = double.tryParse(summary['delivery_charge']?.toString() ?? '0.0') ?? 0.0;
         _amountPayable = double.tryParse(summary['amount_payable']?.toString() ?? '0.0') ?? 0.0;
+        _amountNeededForFreeDelivery = double.tryParse(summary['amount_needed_for_free_delivery']?.toString() ?? '0.0') ?? 0.0;
+        _freeDeliveryMessage = summary['free_delivery_message']?.toString() ?? '';
       });
     } catch (e) {
       print("Error fetching cart summary: $e");
@@ -161,6 +166,8 @@ class _CartPageState extends State<CartPage> {
         _convenienceFee = 0.0;
         _deliveryCharge = _cartItems.isEmpty ? 0.00 : 5.00;
         _amountPayable = _cartSubtotal + _deliveryCharge;
+        _amountNeededForFreeDelivery = 0.0;
+        _freeDeliveryMessage = '';
       });
     }
   }
@@ -479,6 +486,131 @@ class _CartPageState extends State<CartPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (_freeDeliveryMessage.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: _amountNeededForFreeDelivery > 0
+                          ? [const Color(0xFFFFFDF5), const Color(0xFFFFF8E7)]
+                          : [const Color(0xFFF3FAF5), const Color(0xFFEAF8EE)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: _amountNeededForFreeDelivery > 0
+                          ? const Color(0xFFFFE0B2).withOpacity(0.8)
+                          : const Color(0xFFC8E6C9).withOpacity(0.8),
+                      width: 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _amountNeededForFreeDelivery > 0
+                            ? Colors.orange.withOpacity(0.06)
+                            : Colors.green.withOpacity(0.06),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: _amountNeededForFreeDelivery > 0
+                                  ? const Color(0xFFFFF3E0)
+                                  : const Color(0xFFC8E6C9).withOpacity(0.4),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              _amountNeededForFreeDelivery > 0
+                                  ? Icons.delivery_dining_rounded
+                                  : Icons.check_circle_rounded,
+                              color: _amountNeededForFreeDelivery > 0
+                                  ? Colors.orange.shade800
+                                  : primaryGreen,
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _amountNeededForFreeDelivery > 0
+                                      ? 'Free Delivery Progress'
+                                      : 'Free Delivery Unlocked!',
+                                  style: TextStyle(
+                                    color: _amountNeededForFreeDelivery > 0
+                                        ? Colors.orange.shade900
+                                        : darkGreen,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _freeDeliveryMessage,
+                                  style: TextStyle(
+                                    color: _amountNeededForFreeDelivery > 0
+                                        ? Colors.orange.shade800
+                                        : darkGreen.withOpacity(0.8),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (_amountNeededForFreeDelivery > 0 && (_cartSubtotal + _amountNeededForFreeDelivery) > 0) ...[
+                        const SizedBox(height: 14),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: LinearProgressIndicator(
+                            value: _cartSubtotal / (_cartSubtotal + _amountNeededForFreeDelivery),
+                            backgroundColor: Colors.orange.shade100.withOpacity(0.5),
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.orange.shade600),
+                            minHeight: 8,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '₹${_cartSubtotal.toStringAsFixed(0)}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange.shade700,
+                              ),
+                            ),
+                            Text(
+                              'Free Delivery at ₹${(_cartSubtotal + _amountNeededForFreeDelivery).toStringAsFixed(0)}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
             // Cart Items List
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1149,17 +1281,35 @@ class _CartPageState extends State<CartPage> {
           const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Delivery Fee',
                 style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
               ),
-              Text(
-                '₹${_deliveryCharge.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    _deliveryCharge == 0.0 ? 'FREE' : '₹${_deliveryCharge.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: _deliveryCharge == 0.0 ? primaryGreen : Colors.black,
+                    ),
+                  ),
+                  if (_amountNeededForFreeDelivery > 0) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      'Add ₹${_amountNeededForFreeDelivery.toStringAsFixed(2)} more for Free Delivery',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange.shade700,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
@@ -1450,10 +1600,13 @@ class _CartPageState extends State<CartPage> {
                 ),
                 onPressed: () {
                   Navigator.pop(context); // Close dialog
-                  Navigator.pop(context); // Pop back to Shop Home
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const OrdersPage()),
+                  );
                 },
                 child: const Text(
-                  "Continue Shopping",
+                  "Go to My Orders",
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),

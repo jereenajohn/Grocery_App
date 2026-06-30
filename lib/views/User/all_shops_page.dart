@@ -564,7 +564,7 @@ class _AllShopsPageState extends State<AllShopsPage> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                '4.5',
+                                shop.avgRating?.toStringAsFixed(1) ?? 'N/A',
                                 style: TextStyle(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w800,

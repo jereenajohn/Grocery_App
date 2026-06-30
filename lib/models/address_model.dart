@@ -10,6 +10,8 @@ class AddressModel {
   final int district;
   final String districtName;
   final String postalCode;
+  final double? latitude;
+  final double? longitude;
   final String createdAt;
 
   AddressModel({
@@ -24,10 +26,18 @@ class AddressModel {
     required this.district,
     required this.districtName,
     required this.postalCode,
+    this.latitude,
+    this.longitude,
     required this.createdAt,
   });
 
   factory AddressModel.fromJson(Map<String, dynamic> json) {
+    double? parseDouble(dynamic val) {
+      if (val == null) return null;
+      if (val is num) return val.toDouble();
+      return double.tryParse(val.toString());
+    }
+
     return AddressModel(
       id: json['id'] ?? 0,
       address: json['address']?.toString() ?? '',
@@ -40,6 +50,8 @@ class AddressModel {
       district: json['district'] ?? 0,
       districtName: json['district_name']?.toString() ?? '',
       postalCode: json['postal_code']?.toString() ?? '',
+      latitude: parseDouble(json['latitude']),
+      longitude: parseDouble(json['longitude']),
       createdAt: json['created_at']?.toString() ?? '',
     );
   }
@@ -53,6 +65,8 @@ class AddressModel {
       'state': state,
       'district': district,
       'postal_code': postalCode,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
 }

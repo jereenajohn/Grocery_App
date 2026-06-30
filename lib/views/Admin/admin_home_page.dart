@@ -4,6 +4,7 @@ import 'package:grocery_app/views/Admin/shop_owners_page.dart';
 import 'package:grocery_app/views/Admin/manage_categories_page.dart';
 import 'package:grocery_app/views/Admin/manage_payment_methods_page.dart';
 import 'package:grocery_app/views/Admin/admin_orders_page.dart';
+import 'package:grocery_app/views/Admin/admin_pending_payouts_page.dart';
 import '../../services/api_service.dart';
 
 class AdminHomePage extends StatefulWidget {
@@ -23,6 +24,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
   final ApiService _apiService = ApiService();
   int _totalOrders = 0;
   int _totalShops = 0;
+  int _unpaidPayouts = 0;
   bool _isLoadingStats = false;
 
   @override
@@ -37,10 +39,12 @@ class _AdminHomePageState extends State<AdminHomePage> {
     try {
       final ordersRes = await _apiService.getAdminOrders(page: 1);
       final shopsRes = await _apiService.getShopApprovals(page: 1);
+      final payoutsRes = await _apiService.getUnpaidPayouts(page: 1);
       if (!mounted) return;
       setState(() {
         _totalOrders = ordersRes['count'] ?? 0;
         _totalShops = shopsRes['count'] ?? 0;
+        _unpaidPayouts = payoutsRes['count'] ?? 0;
         _isLoadingStats = false;
       });
     } catch (_) {
@@ -402,6 +406,17 @@ class _AdminHomePageState extends State<AdminHomePage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const ManagePaymentMethodsPage()),
+                  );
+                },
+              ),
+              _buildGridActionCard(
+                icon: Icons.price_check_rounded,
+                title: 'Pending Payouts',
+                subtitle: _isLoadingStats ? 'Loading...' : '$_unpaidPayouts unpaid orders pending',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AdminPendingPayoutsPage()),
                   );
                 },
               ),
